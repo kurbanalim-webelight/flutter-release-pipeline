@@ -1,14 +1,14 @@
 /*
  * Step 3 - user inputs plus externalised per-project configuration.
  *
- * The Jenkinsfile is meant to be identical across projects. Anything that
- * differs per project lives in pipeline.properties, which is read at build time
- * and exported into the environment.
+ * The Jenkinsfile is identical across projects. Anything that differs per
+ * project lives in pipeline.properties, which the pipeline picks up on its own.
  *
- * Parsing is done in plain Groovy rather than via readProperties/readYaml so the
- * pipeline has no plugin prerequisites beyond Pipeline itself.
+ * Parsing is plain Groovy rather than readProperties/readYaml, so the pipeline
+ * has no plugin prerequisites beyond Pipeline itself.
  */
-// Populated by the Load Configuration stage and read by later stages.
+
+// Populated by the Load Configuration stage, read by later stages.
 Map<String, String> projectConfig = [:]
 
 pipeline {
@@ -17,6 +17,13 @@ pipeline {
     options {
         timestamps()
         timeout(time: 5, unit: 'MINUTES')
+    }
+
+    environment {
+        // Picked up automatically - deliberately not a parameter, since the user
+        // has no reason to choose it. Becomes the workspace-relative
+        // 'pipeline.properties' once a Checkout stage clones the project.
+        CONFIG_FILE = '/Users/macbook-pro-002/Desktop/release-pipeline/pipeline.properties'
     }
 
     parameters {
@@ -43,13 +50,6 @@ pipeline {
             defaultValue: '',
             trim: true,
             description: 'Positive integer, e.g. 1, 10, 32 (required)'
-        )
-        string(
-            name: 'CONFIG_FILE',
-            defaultValue: '/Users/macbook-pro-002/Desktop/release-pipeline/pipeline.properties',
-            trim: true,
-            description: 'Path to the project pipeline.properties. Becomes the ' +
-                         'workspace-relative "pipeline.properties" once a Checkout stage exists.'
         )
     }
 
@@ -90,18 +90,18 @@ pipeline {
         stage('Load Configuration') {
             steps {
                 script {
-                    if (!fileExists(params.CONFIG_FILE)) {
-                        error "Configuration file not found: ${params.CONFIG_FILE}"
+                    if (!fileExists(env.CONFIG_FILE)) {
+                        error "Configuration file not found: ${env.CONFIG_FILE}"
                     }
 
-                    projectConfig = parseProperties(readFile(params.CONFIG_FILE))
+                    projectConfig = parseProperties(readFile(env.CONFIG_FILE))
                     if (!projectConfig) {
-                        error "No settings found in ${params.CONFIG_FILE}."
+                        error "No settings found in ${env.CONFIG_FILE}."
                     }
 
                     String flutterVersion = projectConfig.get('FLUTTER_VERSION')
                     if (!flutterVersion) {
-                        error "FLUTTER_VERSION is not set in ${params.CONFIG_FILE}."
+                        error "FLUTTER_VERSION is not set in ${env.CONFIG_FILE}."
                     }
                     if (!(flutterVersion ==~ /^\d+\.\d+\.\d+(-\S+)?$/)) {
                         error "FLUTTER_VERSION must look like 3.35.4, got '${flutterVersion}'."
@@ -111,7 +111,7 @@ pipeline {
                     // Assigning env by subscript is blocked by the Groovy sandbox.
                     env.FLUTTER_VERSION = flutterVersion
 
-                    echo "Loaded ${projectConfig.size()} setting(s) from ${params.CONFIG_FILE}"
+                    echo "Loaded ${projectConfig.size()} setting(s) from ${env.CONFIG_FILE}"
                 }
             }
         }
@@ -119,10 +119,18 @@ pipeline {
         stage('Show Configuration') {
             steps {
                 script {
-                    // Rendered from the map, so a new key in pipeline.properties
-                    // appears here without touching the Jenkinsfile.
+                    // Width comes from the longest key, so the columns stay lined
+                    // up as new settings are added.
+                    int width = 0
+                    projectConfig.each { String key, String value ->
+                        if (key.length() > width) {
+                            width = key.length()
+                        }
+                    }
+                    width += 2
+
                     String settings = projectConfig.collect { String key, String value ->
-                        '  ' + (key + ':').padRight(18) + value
+                        '  ' + (key + ':').padRight(width) + value
                     }.join('\n')
 
                     echo """
@@ -136,7 +144,8 @@ Build inputs (from the user)
 
 Project configuration
 ---------------------
-  source:           ${params.CONFIG_FILE}
+  source: ${env.CONFIG_FILE}
+
 ${settings}
 """
                 }
