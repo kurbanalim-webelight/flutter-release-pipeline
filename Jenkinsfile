@@ -76,7 +76,7 @@ pipeline {
                     }
 
                     List<String> missing = []
-                    ['FLUTTER_VERSION', 'GIT_REPO_URL', 'GIT_BRANCH', 'GIT_CREDENTIALS_ID'].each { String key ->
+                    ['FLUTTER_VERSION', 'GIT_PROTOCOL', 'GIT_HOST', 'GIT_REPO_PATH', 'GIT_BRANCH', 'GIT_CREDENTIALS_ID'].each { String key ->
                         if (!projectConfig.get(key)) {
                             missing << key
                         }
@@ -90,21 +90,31 @@ pipeline {
                         error "FLUTTER_VERSION must look like 3.35.4, got '${flutterVersion}'."
                     }
 
-                    String repoUrl = projectConfig.get('GIT_REPO_URL')
-                    if (!(repoUrl ==~ /^(https:\/\/|git@).+/)) {
-                        error "GIT_REPO_URL must start with https:// or git@, got '${repoUrl}'."
+                    String repoPath = projectConfig.get('GIT_REPO_PATH')
+                    if (repoPath.startsWith('/') || repoPath.endsWith('.git')) {
+                        error "GIT_REPO_PATH must have no leading slash and no .git suffix, got '${repoPath}'."
                     }
 
                     String credentialsId = projectConfig.get('GIT_CREDENTIALS_ID')
                     if (credentialsId ==~ /^(glpat-|gh[pousr]_|xox[baprs]-).*/) {
                         error 'GIT_CREDENTIALS_ID looks like an access token, not a credential ID. ' +
-                              'Store the token in Jenkins Credentials and put its ID here.'
+                              'Store the secret in Jenkins Credentials and put its ID here.'
                     }
 
                     env.FLUTTER_VERSION    = flutterVersion
-                    env.GIT_REPO_URL       = repoUrl
                     env.GIT_BRANCH         = projectConfig.get('GIT_BRANCH')
                     env.GIT_CREDENTIALS_ID = credentialsId
+                    String protocol = projectConfig.get('GIT_PROTOCOL')
+                    String host = projectConfig.get('GIT_HOST')
+                    if (protocol == 'ssh') {
+                        env.GIT_URL = 'git@' + host + ':' + repoPath + '.git'
+                    } else if (protocol == 'https') {
+                        env.GIT_URL = 'https://' + host + '/' + repoPath + '.git'
+                    } else {
+                        error "GIT_PROTOCOL must be ssh or https, got '${protocol}'."
+                    }
+
+                    echo "Repository: ${env.GIT_URL}"
 
                     echo "Loaded ${projectConfig.size()} setting(s) from ${env.CONFIG_FILE}"
                 }
@@ -151,14 +161,10 @@ pipeline {
 
         stage('Clone Repository') {
             steps {
-                checkout scmGit(
-                    branches: [[name: "*/${env.GIT_BRANCH}"]],
-                    userRemoteConfigs: [[
-                        url: env.GIT_REPO_URL,
-                        credentialsId: env.GIT_CREDENTIALS_ID
-                    ]],
-                    extensions: [[$class: 'CloneOption', shallow: true, depth: 1, noTags: true]]
-                )
+                git branch: env.GIT_BRANCH,
+                    credentialsId: env.GIT_CREDENTIALS_ID,
+                    url: env.GIT_URL
+
                 sh 'git --no-pager log -1 --format="%h %s"'
             }
         }

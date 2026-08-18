@@ -13,10 +13,12 @@ project different.
 | # | Variable | Required | In one line |
 | :-: | :------- | :------: | :---------- |
 | 1 | [`FLUTTER_VERSION`](#-1-flutter_version) | ✅ Always | Which Flutter SDK builds the app |
-| 2 | [`GIT_REPO_URL`](#-2-git_repo_url) | ✅ Always | Which GitLab repository to build |
-| 3 | [`GIT_BRANCH`](#-3-git_branch) | ✅ Always | Which branch to clone |
-| 4 | [`GIT_CREDENTIALS_ID`](#-4-git_credentials_id) | ✅ Always | Where the GitLab token is kept |
-| 5 | [`SHOREBIRD_TOKEN_CREDENTIALS_ID`](#-5-shorebird_token_credentials_id) | ⚠️ Shorebird only | Where the Shorebird token is kept |
+| 2 | [`GIT_PROTOCOL`](#-2-git_protocol) | ✅ Always | How to reach GitLab |
+| 3 | [`GIT_HOST`](#-3-git_host) | ✅ Always | Which GitLab server |
+| 4 | [`GIT_REPO_PATH`](#-4-git_repo_path) | ✅ Always | Which project on that server |
+| 5 | [`GIT_BRANCH`](#-5-git_branch) | ✅ Always | Which branch to clone |
+| 6 | [`GIT_CREDENTIALS_ID`](#-6-git_credentials_id) | ✅ Always | Where the git credential is kept |
+| 7 | [`SHOREBIRD_TOKEN_CREDENTIALS_ID`](#-7-shorebird_token_credentials_id) | ⚠️ Shorebird only | Where the Shorebird token is kept |
 
 ---
 
@@ -44,26 +46,81 @@ produces the same build on any machine, today or in six months.
 
 ---
 
-## 🌐 2. `GIT_REPO_URL`
+## 🔌 2. `GIT_PROTOCOL`
 
 | | |
 | :--- | :--- |
-| **Example** | `https://gitlab.com/your-group/your-project.git` |
-| **Format** | Must start with `https://` or `git@` |
+| **Example** | `https` |
+| **Format** | `ssh` or `https` |
 | **Required** | ✅ Always |
 
-**What it is** — the GitLab repository the pipeline clones and builds.
+**What it is** — how the pipeline reaches GitLab.
 
 ```properties
-GIT_REPO_URL=https://gitlab.com/your-group/your-project.git
+GIT_PROTOCOL=https
 ```
 
-**Why it exists** — this is what makes one pipeline serve many projects. Point it
-at a different repository and the same `Jenkinsfile` builds a different app.
+It decides how the clone URL is built:
+
+| Value | URL |
+| :---- | :-- |
+| `ssh` | `git@HOST:PATH.git` |
+| `https` | `https://HOST/PATH.git` |
+
+**Why it exists** — SSH needs port 22 open to the GitLab server. That is normal
+inside the office network but often blocked from outside it, where only HTTPS gets
+through. One setting lets the same pipeline run in both places.
+
+> [!IMPORTANT]
+> `GIT_CREDENTIALS_ID` must match. `ssh` needs an SSH key credential, `https` needs
+> a username and password credential.
 
 ---
 
-## 🌿 3. `GIT_BRANCH`
+## 🌐 3. `GIT_HOST`
+
+| | |
+| :--- | :--- |
+| **Example** | `gitlab.webelight.co.in` |
+| **Format** | A hostname, no scheme and no trailing slash |
+| **Required** | ✅ Always |
+
+**What it is** — the GitLab server the project lives on.
+
+```properties
+GIT_HOST=gitlab.webelight.co.in
+```
+
+**Why it exists** — it is the same for every project on the server. Keeping it
+separate from the project path means the clone URL is assembled in one place
+instead of being spelled out again in every project.
+
+---
+
+## 📁 4. `GIT_REPO_PATH`
+
+| | |
+| :--- | :--- |
+| **Example** | `webelight/ccmt/chinmaya-mission-flutter` |
+| **Format** | Group and project, no leading slash, no `.git` suffix |
+| **Required** | ✅ Always |
+
+**What it is** — which project to clone from that server.
+
+```properties
+GIT_REPO_PATH=webelight/ccmt/chinmaya-mission-flutter
+```
+
+**Why it exists** — this is the one part of the clone URL that changes per
+project. It is combined with `GIT_HOST` into an SSH URL:
+
+```text
+git@gitlab.webelight.co.in:webelight/ccmt/chinmaya-mission-flutter.git
+```
+
+---
+
+## 🌿 5. `GIT_BRANCH`
 
 | | |
 | :--- | :--- |
@@ -83,7 +140,7 @@ depending on whatever the remote's default happens to be.
 
 ---
 
-## 🔑 4. `GIT_CREDENTIALS_ID`
+## 🔑 6. `GIT_CREDENTIALS_ID`
 
 | | |
 | :--- | :--- |
@@ -91,28 +148,32 @@ depending on whatever the remote's default happens to be.
 | **Format** | A Jenkins credential ID |
 | **Required** | ✅ Always |
 
-**What it is** — the **name** of a Jenkins credential. Not the token.
+**What it is** — the **name** of a Jenkins credential. Never the key or token
+itself.
 
 ```properties
 GIT_CREDENTIALS_ID=gitlab-token
 ```
 
-The credential itself is created in Jenkins:
+The credential is created in Jenkins, and its kind depends on `GIT_PROTOCOL`:
 
-| Field | Value |
-| :---- | :---- |
-| Kind | Username with password |
-| Username | `oauth2` |
-| Password | The GitLab access token |
-| ID | `gitlab-token` |
+| `GIT_PROTOCOL` | Kind | Username | Secret |
+| :------------- | :--- | :------- | :----- |
+| `ssh` | SSH Username with private key | `git` | The private key |
+| `https` | Username with password | `oauth2` | The access token |
 
-**Why it exists** — cloning a private repository needs a token. The token is a
-secret; this file is not. Storing only the name keeps the secret inside Jenkins,
-where the pipeline can read it but git and the build log never see it.
+**Why it exists** — cloning a private repository needs credentials, and this file
+is not a safe place for them. Storing only the name keeps the secret inside
+Jenkins, where the pipeline can read it but git history and build logs never see
+it.
+
+> [!WARNING]
+> Putting a raw token here instead of a credential ID is rejected by the pipeline.
+> It would land in git history and in the build log in plain text.
 
 ---
 
-## 🐦 5. `SHOREBIRD_TOKEN_CREDENTIALS_ID`
+## 🐦 7. `SHOREBIRD_TOKEN_CREDENTIALS_ID`
 
 | | |
 | :--- | :--- |

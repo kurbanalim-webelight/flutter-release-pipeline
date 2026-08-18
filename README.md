@@ -33,7 +33,8 @@ Names the run so the build history is readable:
 | Action | Detail |
 | :----- | :----- |
 | Parse | `KEY=VALUE` per line; `#` and `!` start a comment |
-| Require | `FLUTTER_VERSION`, `GIT_REPO_URL`, `GIT_BRANCH`, `GIT_CREDENTIALS_ID` |
+| Require | `FLUTTER_VERSION`, `GIT_PROTOCOL`, `GIT_HOST`, `GIT_REPO_PATH`, `GIT_BRANCH`, `GIT_CREDENTIALS_ID` |
+| Build | The clone URL from `GIT_PROTOCOL`, `GIT_HOST` and `GIT_REPO_PATH` |
 | Reject | A `GIT_CREDENTIALS_ID` that looks like a raw token instead of an ID |
 | Export | Each value becomes an environment variable for later steps |
 
@@ -64,6 +65,30 @@ Clones the GitLab project into the workspace.
 
 | # | Action |
 | :-: | :----- |
-| 1 | Clone `GIT_REPO_URL` at branch `GIT_BRANCH`, authenticating with `GIT_CREDENTIALS_ID` |
-| 2 | Shallow clone (`depth 1`, no tags) so only the commit being built is fetched |
-| 3 | Print the commit that was checked out |
+| 1 | Clone at branch `GIT_BRANCH`, authenticating with `GIT_CREDENTIALS_ID` |
+| 2 | Print the commit that was checked out |
+
+### Both SSH and HTTPS are supported
+
+`GIT_PROTOCOL` in [`pipeline.properties`](pipeline.properties) decides which one is
+used. Anything other than `ssh` or `https` fails validation.
+
+| `GIT_PROTOCOL` | URL built | Credential kind `GIT_CREDENTIALS_ID` must point to |
+| :------------- | :-------- | :------------------------------------------------- |
+| `ssh` | `git@HOST:PATH.git` | SSH Username with private key — username `git` |
+| `https` | `https://HOST/PATH.git` | Username with password — username `oauth2`, password is the access token |
+
+```text
+ssh    git@gitlab.webelight.co.in:webelight/ccmt/chinmaya-mission-flutter.git
+https  https://gitlab.webelight.co.in/webelight/ccmt/chinmaya-mission-flutter.git
+```
+
+> [!IMPORTANT]
+> The credential must match the protocol. `GIT_CREDENTIALS_ID` names a single
+> credential, so switching `GIT_PROTOCOL` also means pointing it at a credential of
+> the matching kind. Create both once, then change the two lines together.
+
+> [!NOTE]
+> `ssh` needs port 22 open to the GitLab host. That holds inside the office network
+> but is usually blocked outside it, where the clone times out after about 75
+> seconds. Use `https` when working from outside.
