@@ -97,7 +97,7 @@ pipeline {
                         error "GIT_REPO_PATH must have no leading slash and no .git suffix, got '${repoPath}'."
                     }
 
-                    ['GIT_CREDENTIALS_ID', 'INFISICAL_TOKEN_CREDENTIALS_ID', 'R2_CREDENTIALS_ID'].each { String key ->
+                    ['GIT_CREDENTIALS_ID', 'INFISICAL_TOKEN_CREDENTIALS_ID', 'S3_CREDENTIALS_ID'].each { String key ->
                         if (projectConfig.get(key) ==~ /^(glpat-|gh[pousr]_|xox[baprs]-|st\.).*/) {
                             error "${key} looks like a secret, not a credential ID. " +
                                   'Store the secret in Jenkins Credentials and put its ID here.'
@@ -106,12 +106,13 @@ pipeline {
                     String credentialsId = projectConfig.get('GIT_CREDENTIALS_ID')
 
                     if (projectConfig.any { String key, String value -> key.startsWith('SECRET_FILE.') }) {
-                        List<String> missingR2 = ['R2_ENDPOINT', 'R2_CREDENTIALS_ID'].findAll { String key ->
-                            !projectConfig.get(key)
-                        }
-                        if (missingR2) {
+                        List<String> missingStorage =
+                            ['S3_ENDPOINT', 'S3_REGION', 'S3_CREDENTIALS_ID'].findAll { String key ->
+                                !projectConfig.get(key)
+                            }
+                        if (missingStorage) {
                             error "Required in ${env.CONFIG_FILE} when SECRET_FILE.* entries are set:\n  - " +
-                                  missingR2.join('\n  - ')
+                                  missingStorage.join('\n  - ')
                         }
                     }
 
@@ -190,43 +191,39 @@ pipeline {
 
         stage('Load Secret Files') {
             steps {
-                withCredentials([string(
-                    credentialsId: env.INFISICAL_TOKEN_CREDENTIALS_ID,
-                    variable: 'INFISICAL_TOKEN'
-                )]) {
-                    sh '''
-                        set -eu
+                script {
+                    withCredentials([string(
+                        credentialsId: env.INFISICAL_TOKEN_CREDENTIALS_ID,
+                        variable: 'INFISICAL_TOKEN'
+                    )]) {
+                        sh '''
+                            set -eu
 
-                        if ! command -v infisical >/dev/null 2>&1; then
-                            echo "infisical not found on this agent - installing"
-                            if ! command -v brew >/dev/null 2>&1; then
-                                echo "Homebrew is required to install the Infisical CLI." >&2
+                            if ! command -v infisical >/dev/null 2>&1; then
+                                echo "infisical not found on this agent - installing"
+                                if ! command -v brew >/dev/null 2>&1; then
+                                    echo "Homebrew is required to install the Infisical CLI." >&2
+                                    exit 1
+                                fi
+                                HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew install infisical
+                            fi
+                            echo "infisical $(infisical --version 2>&1 | head -1)"
+
+                            infisical export \
+                                --projectId="$INFISICAL_PROJECT_ID" \
+                                --env="$INFISICAL_ENV" \
+                                --domain="$INFISICAL_API_URL" \
+                                --format=dotenv > .env
+
+                            if [ ! -s .env ]; then
+                                echo "Infisical returned nothing - .env is empty" >&2
                                 exit 1
                             fi
-                            HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew install infisical
-                        fi
-                        echo "infisical $(infisical --version 2>&1 | head -1)"
 
-                        infisical export \
-                            --projectId="$INFISICAL_PROJECT_ID" \
-                            --env="$INFISICAL_ENV" \
-                            --domain="$INFISICAL_API_URL" \
-                            --format=dotenv > .env
+                            echo ".env written to $(pwd) with $(grep -c "^[A-Za-z_]" .env) variable(s)"
+                        '''
+                    }
 
-                        if [ ! -s .env ]; then
-                            echo "Infisical returned nothing - .env is empty" >&2
-                            exit 1
-                        fi
-
-                        echo ".env written to $(pwd) with $(grep -c "^[A-Za-z_]" .env) variable(s)"
-                    '''
-                }
-            }
-        }
-
-        stage('Download Secret Files') {
-            steps {
-                script {
                     Map<String, String> secretFiles = [:]
                     projectConfig.each { String key, String value ->
                         if (key.startsWith('SECRET_FILE.')) {
@@ -253,10 +250,11 @@ pipeline {
                         echo "$(aws --version 2>&1 | head -1)"
                     '''
 
-                    String endpoint = projectConfig.get('R2_ENDPOINT')
+                    String endpoint = projectConfig.get('S3_ENDPOINT')
+                    String region = projectConfig.get('S3_REGION')
 
                     withCredentials([usernamePassword(
-                        credentialsId: projectConfig.get('R2_CREDENTIALS_ID'),
+                        credentialsId: projectConfig.get('S3_CREDENTIALS_ID'),
                         usernameVariable: 'AWS_ACCESS_KEY_ID',
                         passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                     )]) {
@@ -265,7 +263,7 @@ pipeline {
                                 set -eu
 
                                 mkdir -p "\$(dirname '${destination}')"
-                                AWS_DEFAULT_REGION=auto \\
+                                AWS_DEFAULT_REGION='${region}' \\
                                     aws s3 cp '${source}' '${destination}' --endpoint-url '${endpoint}'
 
                                 if [ ! -s '${destination}' ]; then

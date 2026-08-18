@@ -124,13 +124,13 @@ it never appears in a command line.
 ## 📦 5. Download Secret Files
 
 Pulls the files that cannot be committed — the keystore, `google-services.json`,
-`key.properties`, the iOS plist — out of Cloudflare R2 and into the checkout.
+`key.properties`, the iOS plist — out of object storage and into the checkout.
 
 Each one is a line in [`pipeline.properties`](pipeline.properties):
 
 ```properties
-SECRET_FILE.android/key.properties=s3://assets/ccmt/prod/key.properties
-└─ prefix ─┘└─ where it goes ───┘   └─ where it comes from ───────────┘
+SECRET_FILE.android/key.properties=s3://my-bucket/key.properties
+└─ prefix ─┘└─ where it goes ───┘   └─ where it comes from ────┘
 ```
 
 | # | Action |
@@ -141,18 +141,18 @@ SECRET_FILE.android/key.properties=s3://assets/ccmt/prod/key.properties
 | 4 | Fail if a downloaded file is empty |
 
 ```text
-android/app/google-services.json <- s3://assets/ccmt/prod/google-services.json
-android/key.properties <- s3://assets/ccmt/prod/key.properties
-android/app/upload-keystore.jks <- s3://assets/ccmt/prod/upload-keystore.jks
-ios/Runner/GoogleService-Info.plist <- s3://assets/ccmt/prod/GoogleService-Info.plist
-Downloaded 4 secret file(s)
+android/key.properties <- s3://my-bucket/key.properties
+android/cm-app.jks <- s3://my-bucket/cm-app.jks
+ios/Runner/GoogleService-Info.plist <- s3://my-bucket/GoogleService-Info.plist
+Downloaded 3 secret file(s)
 ```
 
-### R2 is reached with the S3 API
+### Any S3-compatible storage works
 
-R2 is S3-compatible, so this is a plain `aws s3 cp` pointed at `R2_ENDPOINT` with
-the region fixed to `auto`. The keys come from the Jenkins credential named by
-`R2_CREDENTIALS_ID` and are passed through the environment, never on a command
+The download is a plain `aws s3 cp` aimed at `S3_ENDPOINT` with `S3_REGION`, so
+AWS S3, Cloudflare R2, MinIO, Backblaze B2 and DigitalOcean Spaces are all just a
+different endpoint. The keys come from the Jenkins credential named by
+`S3_CREDENTIALS_ID` and are passed through the environment, never on a command
 line.
 
 > [!NOTE]

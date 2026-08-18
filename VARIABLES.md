@@ -23,9 +23,10 @@ project different.
 | 9 | [`INFISICAL_ENV`](#-9-infisical_env) | ✅ Always | Which Infisical environment |
 | 10 | [`INFISICAL_TOKEN_CREDENTIALS_ID`](#-10-infisical_token_credentials_id) | ✅ Always | Where the Infisical token is kept |
 | 11 | [`SHOREBIRD_TOKEN_CREDENTIALS_ID`](#-11-shorebird_token_credentials_id) | ⚠️ Shorebird only | Where the Shorebird token is kept |
-| 12 | [`R2_ENDPOINT`](#-12-r2_endpoint) | ⚠️ With secret files | Which R2 account the files come from |
-| 13 | [`R2_CREDENTIALS_ID`](#-13-r2_credentials_id) | ⚠️ With secret files | Where the R2 keys are kept |
-| 14 | [`SECRET_FILE.*`](#-14-secret_file) | ⚠️ Per file | Which file goes where in the project |
+| 12 | [`S3_ENDPOINT`](#-12-s3_endpoint) | ⚠️ With secret files | Which storage service the files come from |
+| 13 | [`S3_REGION`](#-13-s3_region) | ⚠️ With secret files | Which region the bucket is in |
+| 14 | [`S3_CREDENTIALS_ID`](#-14-s3_credentials_id) | ⚠️ With secret files | Where the storage keys are kept |
+| 15 | [`SECRET_FILE.*`](#-15-secret_file) | ⚠️ Per file | Which file goes where in the project |
 
 ---
 
@@ -288,7 +289,7 @@ above: the name lives here, the secret stays in Jenkins.
 
 ---
 
-## 🪣 12. `R2_ENDPOINT`
+## 🪣 12. `S3_ENDPOINT`
 
 | | |
 | :--- | :--- |
@@ -296,37 +297,67 @@ above: the name lives here, the secret stays in Jenkins.
 | **Format** | A URL, no trailing slash |
 | **Required** | ⚠️ Only when `SECRET_FILE.*` entries are set |
 
-**What it is** — the Cloudflare R2 address the secret files are downloaded from.
+**What it is** — the API address of the object storage the secret files come from.
 
 ```properties
-R2_ENDPOINT=https://a1b2c3d4.r2.cloudflarestorage.com
+S3_ENDPOINT=https://a1b2c3d4.r2.cloudflarestorage.com
 ```
 
-The subdomain is your Cloudflare **account ID**. Find it in the dashboard under
-R2 → Manage API tokens, next to the S3 endpoint.
+Any service that speaks the S3 API works. The endpoint is the only thing that
+changes between them:
 
-**Why it exists** — R2 speaks the S3 API, so the same `aws s3 cp` works against it.
-The only difference is where the request goes, and that is this one line. Point it
-at a different account, or at real AWS S3, without touching the `Jenkinsfile`.
+| Service | Endpoint |
+| :------ | :------- |
+| AWS S3 | `https://s3.<region>.amazonaws.com` |
+| Cloudflare R2 | `https://<account-id>.r2.cloudflarestorage.com` |
+| MinIO | `https://minio.example.com:9000` |
+| Backblaze B2 | `https://s3.<region>.backblazeb2.com` |
+| DigitalOcean Spaces | `https://<region>.digitaloceanspaces.com` |
 
-> [!NOTE]
-> The region is always `auto` for R2. The pipeline sets it, so it is not a setting
-> here.
+**Why it exists** — the pipeline downloads with the aws CLI, which talks the S3
+protocol to whatever address it is given. Keeping that address here means moving
+buckets between providers is a one-line change, with no `Jenkinsfile` edit.
 
 ---
 
-## 🗝️ 13. `R2_CREDENTIALS_ID`
+## 🌍 13. `S3_REGION`
 
 | | |
 | :--- | :--- |
-| **Example** | `r2-credentials` |
+| **Example** | `auto` |
+| **Format** | A region name |
+| **Required** | ⚠️ Only when `SECRET_FILE.*` entries are set |
+
+**What it is** — the region the bucket lives in.
+
+```properties
+S3_REGION=auto
+```
+
+| Service | Value |
+| :------ | :---- |
+| AWS S3 | The bucket's real region, e.g. `ap-south-1` |
+| Cloudflare R2 | `auto` |
+| MinIO | `us-east-1` unless configured otherwise |
+
+**Why it exists** — the S3 protocol signs every request with a region, so one is
+always required even where the service has no regions. Providers that do have them
+reject a wrong value, so it cannot be hardcoded.
+
+---
+
+## 🗝️ 14. `S3_CREDENTIALS_ID`
+
+| | |
+| :--- | :--- |
+| **Example** | `object-storage-credentials` |
 | **Format** | A Jenkins credential ID |
 | **Required** | ⚠️ Only when `SECRET_FILE.*` entries are set |
 
 **What it is** — the **name** of a Jenkins credential. Never the keys themselves.
 
 ```properties
-R2_CREDENTIALS_ID=r2-credentials
+S3_CREDENTIALS_ID=object-storage-credentials
 ```
 
 The credential is created in Jenkins:
@@ -334,12 +365,11 @@ The credential is created in Jenkins:
 | Field | Value |
 | :---- | :---- |
 | Kind | Username with password |
-| Username | R2 Access Key ID |
-| Password | R2 Secret Access Key |
-| ID | `r2-credentials` |
+| Username | Access Key ID |
+| Password | Secret Access Key |
+| ID | `object-storage-credentials` |
 
-Both keys come from the Cloudflare dashboard, R2 → Manage API tokens. **Object
-Read** on the one bucket is enough — the pipeline only downloads.
+Read-only access to the one bucket is enough — the pipeline only downloads.
 
 **Why it exists** — same reasoning as every other credential ID here. The keys stay
 in Jenkins, and the pipeline hands them to the aws CLI through the environment, so
@@ -351,33 +381,37 @@ they never reach a command line or the build log.
 
 ---
 
-## 📦 14. `SECRET_FILE.*`
+## 📦 15. `SECRET_FILE.*`
 
 | | |
 | :--- | :--- |
-| **Example** | `SECRET_FILE.android/key.properties=s3://assets/ccmt/prod/key.properties` |
-| **Format** | `SECRET_FILE.<path in the project>=<r2 uri>` |
+| **Example** | `SECRET_FILE.android/key.properties=s3://my-bucket/key.properties` |
+| **Format** | `SECRET_FILE.<path in the project>=<s3 uri>` |
 | **Required** | ⚠️ One line per file, none is fine |
 
 **What it is** — a map. The key is where the file lands in the checked out project,
-the value is where it comes from in R2.
+the value is where it comes from in the bucket.
 
 ```properties
-SECRET_FILE.android/app/google-services.json=s3://assets/ccmt/prod/google-services.json
-SECRET_FILE.android/key.properties=s3://assets/ccmt/prod/key.properties
-SECRET_FILE.android/app/upload-keystore.jks=s3://assets/ccmt/prod/upload-keystore.jks
-SECRET_FILE.ios/Runner/GoogleService-Info.plist=s3://assets/ccmt/prod/GoogleService-Info.plist
+SECRET_FILE.android/app/src/prod/google-services.json=s3://my-bucket/google-services.json
+SECRET_FILE.android/key.properties=s3://my-bucket/key.properties
+SECRET_FILE.android/cm-app.jks=s3://my-bucket/cm-app.jks
+SECRET_FILE.ios/Runner/GoogleService-Info.plist=s3://my-bucket/GoogleService-Info.plist
 ```
 
 Read one line as a sentence:
 
 ```text
-SECRET_FILE.  android/key.properties  =  s3://assets/ccmt/prod/key.properties
-└─ prefix ─┘  └─ where it goes ────┘     └─ where it comes from ──────────┘
+SECRET_FILE.  android/key.properties  =  s3://my-bucket/key.properties
+└─ prefix ─┘  └─ where it goes ────┘     └─ where it comes from ─────┘
 ```
 
 Destination paths are relative to the project root, and missing directories are
 created. The prefix is stripped, so whatever follows it *is* the path.
+
+> [!NOTE]
+> The `s3://` scheme is how the aws CLI addresses a bucket, on every provider. It
+> does not mean the storage has to be AWS.
 
 **Why it exists** — a keystore, a `google-services.json` and an iOS plist cannot be
 committed, but the build needs them in exact places. Listing them as pairs keeps
@@ -389,8 +423,8 @@ project layout still decides where files land.
 > whatever it finds.
 
 > [!NOTE]
-> A project with no `SECRET_FILE.*` lines skips the stage, and then `R2_ENDPOINT`
-> and `R2_CREDENTIALS_ID` are not required either.
+> A project with no `SECRET_FILE.*` lines skips the download, and then the `S3_*`
+> settings are not required either.
 
 ---
 
