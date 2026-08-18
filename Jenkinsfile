@@ -42,6 +42,8 @@ pipeline {
         stage('Validate & Load Configuration') {
             steps {
                 script {
+                    section('🔍  Validate & Load Configuration')
+
                     List<String> errors = []
 
                     if (!params.BUILD_VERSION) {
@@ -134,9 +136,12 @@ pipeline {
                     env.INFISICAL_ENV                  = projectConfig.get('INFISICAL_ENV')
                     env.INFISICAL_TOKEN_CREDENTIALS_ID = projectConfig.get('INFISICAL_TOKEN_CREDENTIALS_ID')
 
-                    echo "Repository: ${env.GIT_URL}"
-
-                    echo "Loaded ${projectConfig.size()} setting(s) from ${env.CONFIG_FILE}"
+                    echo "✅  Inputs OK: ${params.PLATFORM} / ${params.BUILD_RUNNER} ${params.BUILD_VERSION}+${params.APP_BUILD_NUMBER}"
+                    echo "📦  Repository: ${env.GIT_URL}"
+                    echo "🌿  Branch:     ${env.GIT_BRANCH}"
+                    echo "🐦  Flutter:    ${env.FLUTTER_VERSION}"
+                    echo "🔐  Infisical:  ${env.INFISICAL_ENV} @ ${env.INFISICAL_API_URL}"
+                    echo "⚙️   Settings:   ${projectConfig.size()} loaded from ${env.CONFIG_FILE}"
                 }
             }
         }
@@ -144,6 +149,8 @@ pipeline {
         stage('Setup Flutter') {
             steps {
                 script {
+                    section('🐦  Setup Flutter')
+
                     setupFlutter()
                 }
             }
@@ -151,17 +158,27 @@ pipeline {
 
         stage('Clone Repository') {
             steps {
-                git branch: env.GIT_BRANCH,
-                    credentialsId: env.GIT_CREDENTIALS_ID,
-                    url: env.GIT_URL
+                script {
+                    section('📥  Clone Repository')
 
-                sh 'git --no-pager log -1 --format="%h %s"'
+                    git branch: env.GIT_BRANCH,
+                        credentialsId: env.GIT_CREDENTIALS_ID,
+                        url: env.GIT_URL
+
+                    String head = sh(
+                        script: 'git --no-pager log -1 --format="%h %s"',
+                        returnStdout: true
+                    ).trim()
+                    echo "🔖  HEAD: ${head}"
+                }
             }
         }
 
         stage('Load Secret Files') {
             steps {
                 script {
+                    section('🔐  Load Secret Files')
+
                     withCredentials([string(
                         credentialsId: env.INFISICAL_TOKEN_CREDENTIALS_ID,
                         variable: 'INFISICAL_TOKEN'
@@ -177,7 +194,7 @@ pipeline {
                     }
 
                     if (!secretFiles) {
-                        echo 'No SECRET_FILE.* entries configured - nothing to download.'
+                        echo '📭  No SECRET_FILE.* entries configured - nothing to download.'
                         return
                     }
 
@@ -193,8 +210,21 @@ pipeline {
                         )
                     }
 
-                    echo "Downloaded ${secretFiles.size()} secret file(s)"
+                    echo "✅  Downloaded ${secretFiles.size()} secret file(s)"
                 }
+            }
+        }
+    }
+
+    post {
+        always {
+            script {
+                String result = currentBuild.currentResult
+                String badge = result == 'SUCCESS' ? '🎉' : (result == 'ABORTED' ? '🛑' : '💥')
+                section("${badge}  Build ${result}")
+                echo "🏷️   ${currentBuild.displayName}"
+                echo "⏱️   Duration: ${currentBuild.durationString.replace(' and counting', '')}"
+                echo "🪵  Console:  ${env.BUILD_URL}console"
             }
         }
     }
@@ -216,19 +246,24 @@ Map<String, String> parseProperties(String text) {
     return result
 }
 
+void section(String title) {
+    String rule = '━' * 66
+    echo "\n${rule}\n  ${title}\n${rule}"
+}
+
 void ensureTool(String command, String formula) {
     sh """
         set -eu
 
         if ! command -v ${command} >/dev/null 2>&1; then
-            echo "${command} not found on this agent - installing"
+            echo "⬇️  ${command} not found on this agent - installing"
             if ! command -v brew >/dev/null 2>&1; then
-                echo "Homebrew is required to install ${formula}. Install it on this agent." >&2
+                echo "❌  Homebrew is required to install ${formula}. Install it on this agent." >&2
                 exit 1
             fi
             HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew install ${formula}
         fi
-        echo "${command}: \$(${command} --version 2>&1 | head -1)"
+        echo "🧰  ${command}: \$(${command} --version 2>&1 | head -1)"
     """
 }
 
@@ -243,19 +278,19 @@ void setupFlutter() {
         ACTUAL=$(fvm flutter --version 2>/dev/null | awk '/^Flutter /{print $2; exit}')
 
         if [ -z "$ACTUAL" ]; then
-            echo "Could not determine the active Flutter version" >&2
+            echo "❌  Could not determine the active Flutter version" >&2
             exit 1
         fi
 
-        echo "expected: $FLUTTER_VERSION"
-        echo "actual:   $ACTUAL"
+        echo "🎯  expected: $FLUTTER_VERSION"
+        echo "📍  actual:   $ACTUAL"
 
         if [ "$ACTUAL" != "$FLUTTER_VERSION" ]; then
-            echo "Flutter version mismatch: expected $FLUTTER_VERSION but the active SDK is $ACTUAL" >&2
+            echo "❌  Flutter version mismatch: expected $FLUTTER_VERSION but the active SDK is $ACTUAL" >&2
             exit 1
         fi
 
-        echo "Flutter version matches"
+        echo "✅  Flutter version matches"
     '''
 }
 
@@ -271,18 +306,18 @@ void exportEnvFile() {
             --format=dotenv > .env
 
         if [ ! -s .env ]; then
-            echo "Infisical returned nothing - .env is empty" >&2
+            echo "❌  Infisical returned nothing - .env is empty" >&2
             exit 1
         fi
 
-        echo ".env written to $(pwd) with $(grep -c "^[A-Za-z_]" .env) variable(s)"
+        echo "🗝️   .env written to $(pwd) with $(grep -c "^[A-Za-z_]" .env) variable(s)"
     '''
 }
 
 void downloadSecretFiles(Map<String, String> secretFiles, String endpoint, String region) {
     ensureTool('aws', 'awscli')
 
-    sh 'echo "storage access key id: ${#AWS_ACCESS_KEY_ID} characters"'
+    sh 'echo "🔑  storage access key id: ${#AWS_ACCESS_KEY_ID} characters"'
 
     secretFiles.each { String destination, String source ->
         sh """
@@ -295,11 +330,11 @@ void downloadSecretFiles(Map<String, String> secretFiles, String endpoint, Strin
                 aws s3 cp '${source}' '${destination}' --endpoint-url '${endpoint}'
 
             if [ ! -s '${destination}' ]; then
-                echo "Downloaded file is empty: ${destination}" >&2
+                echo "❌  Downloaded file is empty: ${destination}" >&2
                 exit 1
             fi
 
-            echo "${destination} <- ${source}"
+            echo "⬇️   ${destination} <- ${source}"
         """
     }
 }
