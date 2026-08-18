@@ -1,14 +1,3 @@
-/*
- * Step 3 - user inputs plus externalised per-project configuration.
- *
- * The Jenkinsfile is identical across projects. Anything that differs per
- * project lives in pipeline.properties, which the pipeline picks up on its own.
- *
- * Parsing is plain Groovy rather than readProperties/readYaml, so the pipeline
- * has no plugin prerequisites beyond Pipeline itself.
- */
-
-// Populated by the Load Configuration stage, read by later stages.
 Map<String, String> projectConfig = [:]
 
 pipeline {
@@ -16,13 +5,10 @@ pipeline {
 
     options {
         timestamps()
-        timeout(time: 5, unit: 'MINUTES')
+        timeout(time: 60, unit: 'MINUTES')
     }
 
     environment {
-        // Picked up automatically - deliberately not a parameter, since the user
-        // has no reason to choose it. Becomes the workspace-relative
-        // 'pipeline.properties' once a Checkout stage clones the project.
         CONFIG_FILE = '/Users/macbook-pro-002/Desktop/release-pipeline/pipeline.properties'
     }
 
@@ -43,8 +29,6 @@ pipeline {
             trim: true,
             description: 'Semantic version, e.g. 1.0.0 (required)'
         )
-        // Not BUILD_NUMBER: Jenkins already uses that name for the run's own
-        // number, and a parameter would shadow it.
         string(
             name: 'APP_BUILD_NUMBER',
             defaultValue: '',
@@ -58,8 +42,6 @@ pipeline {
         stage('Validate Inputs') {
             steps {
                 script {
-                    // Collect every problem before failing, so one run reports
-                    // everything that is wrong rather than one thing at a time.
                     List<String> errors = []
 
                     if (!params.BUILD_VERSION) {
@@ -107,8 +89,6 @@ pipeline {
                         error "FLUTTER_VERSION must look like 3.35.4, got '${flutterVersion}'."
                     }
 
-                    // Exported explicitly so shell steps can use $FLUTTER_VERSION.
-                    // Assigning env by subscript is blocked by the Groovy sandbox.
                     env.FLUTTER_VERSION = flutterVersion
 
                     echo "Loaded ${projectConfig.size()} setting(s) from ${env.CONFIG_FILE}"
@@ -116,48 +96,35 @@ pipeline {
             }
         }
 
-        stage('Show Configuration') {
+        stage('Setup Flutter') {
             steps {
-                script {
-                    // Width comes from the longest key, so the columns stay lined
-                    // up as new settings are added.
-                    int width = 0
-                    projectConfig.each { String key, String value ->
-                        if (key.length() > width) {
-                            width = key.length()
-                        }
-                    }
-                    width += 2
+                sh '''
+                    set -eu
 
-                    String settings = projectConfig.collect { String key, String value ->
-                        '  ' + (key + ':').padRight(width) + value
-                    }.join('\n')
+                    if ! command -v fvm >/dev/null 2>&1; then
+                        echo "fvm not found on this agent - installing"
+                        if ! command -v brew >/dev/null 2>&1; then
+                            echo "Homebrew is required to install fvm. Install it on this agent." >&2
+                            exit 1
+                        fi
+                        HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew install fvm
+                    fi
+                    echo "fvm $(fvm --version)"
 
-                    echo """
-Build inputs (from the user)
-----------------------------
-  Platform:         ${params.PLATFORM}
-  Build runner:     ${params.BUILD_RUNNER}
-  Build version:    ${params.BUILD_VERSION}
-  Build number:     ${params.APP_BUILD_NUMBER}
-  Full version:     ${params.BUILD_VERSION}+${params.APP_BUILD_NUMBER}
+                    fvm install "$FLUTTER_VERSION" --setup
+                    fvm use "$FLUTTER_VERSION" --force
+                    fvm flutter --version
 
-Project configuration
----------------------
-  source: ${env.CONFIG_FILE}
-
-${settings}
-"""
-                }
+                    if ! fvm flutter --version 2>/dev/null | grep -q "$FLUTTER_VERSION"; then
+                        echo "Active Flutter SDK is not $FLUTTER_VERSION" >&2
+                        exit 1
+                    fi
+                '''
             }
         }
     }
 }
 
-/**
- * Minimal .properties reader: KEY=VALUE per line, # or ! starts a comment.
- * Deliberately not java.util.Properties, which the Groovy sandbox blocks.
- */
 Map<String, String> parseProperties(String text) {
     Map<String, String> result = [:]
     text.split('\\R').each { String line ->
