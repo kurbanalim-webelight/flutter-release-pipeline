@@ -1,0 +1,1400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two Macs, One Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#f1f4f7;
+  --card:#ffffff;
+  --ink:#16202b;
+  --ink-soft:#4a5b6b;
+  --ink-faint:#7b8b9a;
+  --rule:#d8e0e8;
+  --dev:#4b4ba6;
+  --dev-bg:#e9e9f7;
+  --pipe:#0f7368;
+  --pipe-bg:#e0f0ec;
+  --warn:#a1381c;
+  --warn-bg:#f8e7e0;
+  --shell:#101a24;
+  --shell-ink:#d6dee6;
+  --shell-dim:#7f93a6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0e151c;
+    --card:#151f29;
+    --ink:#e5ecf2;
+    --ink-soft:#a8b8c6;
+    --ink-faint:#7b8b9a;
+    --rule:#26333f;
+    --dev:#a3a3f0;
+    --dev-bg:#22224a;
+    --pipe:#5fc9b8;
+    --pipe-bg:#123c37;
+    --warn:#f0a58c;
+    --warn-bg:#3d211a;
+    --shell:#080d12;
+    --shell-ink:#d6dee6;
+    --shell-dim:#7f93a6;
+  }
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:"Instrument Sans",system-ui,-apple-system,sans-serif;
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:960px;margin:0 auto;padding:0 22px 100px}
+code,pre,.mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace}
+
+/* header */
+header{padding:56px 0 22px}
+.kicker{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 14px}
+h1{font-size:clamp(30px,5vw,46px);line-height:1.05;letter-spacing:-.025em;margin:0 0 14px;max-width:18ch;text-wrap:balance}
+.sub{font-size:18px;color:var(--ink-soft);max-width:62ch;margin:0}
+
+/* tabs */
+.tabs{position:sticky;top:0;z-index:5;background:var(--paper);
+  display:flex;gap:4px;overflow-x:auto;padding:12px 0;margin:22px 0 0;border-bottom:1px solid var(--rule)}
+.tabs button{
+  flex:0 0 auto;background:transparent;border:1px solid transparent;border-radius:999px;
+  font-family:inherit;font-size:13.5px;font-weight:500;color:var(--ink-soft);
+  padding:7px 15px;cursor:pointer;white-space:nowrap;display:flex;gap:8px;align-items:center}
+.tabs button .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-faint)}
+.tabs button:hover{background:var(--card)}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.tabs button[aria-selected="true"] .n{color:var(--paper);opacity:.6}
+.tabs button:focus-visible{outline:2px solid var(--dev);outline-offset:2px}
+
+.panel{display:none;padding-top:34px}
+.panel.on{display:block}
+
+h2{font-size:27px;letter-spacing:-.02em;margin:0 0 8px;text-wrap:balance}
+h3{font-size:18px;margin:34px 0 8px;letter-spacing:-.01em}
+.lede{color:var(--ink-soft);margin:0 0 26px;max-width:62ch}
+p{margin:0 0 12px;max-width:66ch}
+ul{margin:0 0 14px;padding-left:20px;max-width:66ch}
+li{margin:0 0 6px}
+
+/* machine badge */
+.badge{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:4px}
+.badge.dev{background:var(--dev-bg);color:var(--dev)}
+.badge.pipe{background:var(--pipe-bg);color:var(--pipe)}
+.badge.web{background:var(--card);color:var(--ink-soft);border:1px solid var(--rule)}
+
+/* steps */
+ol.steps{list-style:none;counter-reset:s;margin:0;padding:0;display:flex;flex-direction:column;gap:26px}
+ol.steps>li{counter-increment:s;background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:20px 22px}
+ol.steps>li>.top{display:flex;gap:12px;align-items:baseline;margin-bottom:10px}
+ol.steps>li>.top::before{content:"STEP " counter(s,decimal-leading-zero);
+  font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.1em;
+  color:var(--ink-faint);flex:0 0 auto;padding-top:4px}
+ol.steps>li>.top strong{font-size:17.5px;font-weight:600}
+ol.steps>li p:last-child{margin-bottom:0}
+.where{font-size:12.5px;color:var(--ink-faint);margin:-4px 0 14px}
+
+/* code */
+figure{margin:14px 0 16px}
+figcaption{display:flex;justify-content:space-between;align-items:center;gap:10px;
+  background:#1b2734;color:var(--shell-dim);font-family:"JetBrains Mono",monospace;
+  font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;padding:8px 13px;border-radius:6px 6px 0 0}
+pre{margin:0;background:var(--shell);color:var(--shell-ink);padding:15px;border-radius:0 0 6px 6px;
+  overflow-x:auto;font-size:12.5px;line-height:1.7}
+pre.tall{max-height:420px;overflow-y:auto}
+figcaption button{background:transparent;border:1px solid #3b4d5f;color:var(--shell-dim);
+  font-family:inherit;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 9px;border-radius:4px;cursor:pointer}
+figcaption button:hover{background:#26374a;color:#fff}
+.path{font-family:"JetBrains Mono",monospace;font-size:13px;background:var(--paper);
+  border:1px solid var(--rule);padding:1px 5px;border-radius:3px}
+
+/* notes */
+.note{border:1px solid var(--rule);border-left:3px solid var(--pipe);background:var(--card);
+  padding:13px 15px;margin:16px 0;border-radius:0 6px 6px 0}
+.note.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.note .lab{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--pipe);display:block;margin-bottom:4px}
+.note.warn .lab{color:var(--warn)}
+.note p{margin:0;font-size:14.5px}
+
+/* tables */
+.scroll{overflow-x:auto;margin:16px 0 22px}
+table{width:100%;border-collapse:collapse;font-size:14.5px;min-width:520px}
+th,td{text-align:left;padding:11px 14px 11px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-faint);font-weight:400;border-bottom:1px solid var(--ink)}
+td.k{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--dev);width:34%;padding-right:18px}
+td.err{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--warn);width:38%;padding-right:18px}
+
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0 24px}
+.box{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:16px 18px}
+.box h4{margin:8px 0 8px;font-size:16px}
+.box p{font-size:14.5px;color:var(--ink-soft);margin:0}
+.box ul{font-size:14.5px;color:var(--ink-soft);margin:8px 0 0}
+
+footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-faint)}
+@media(max-width:620px){
+  td.k,td.err{width:auto}
+  ol.steps>li>.top{flex-direction:column;gap:2px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="kicker">Flutter · Jenkins · iOS release</p>
+  <h1>Two Macs, One Pipeline</h1>
+  <p class="sub">Everything you must do, in order, to make this repository build the app and send it to
+  TestFlight — without anyone logging into Xcode on the build machine. Written for two computers: the
+  <strong>Development Mac</strong> you work on, and the <strong>Pipeline Mac</strong> that runs Jenkins.</p>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Setup steps">
+  <button role="tab" aria-selected="true"  aria-controls="p0" id="t0"><span class="n">00</span> Start here</button>
+  <button role="tab" aria-selected="false" aria-controls="p1" id="t1"><span class="n">01</span> Development Mac</button>
+  <button role="tab" aria-selected="false" aria-controls="p2" id="t2"><span class="n">02</span> Pipeline Mac</button>
+  <button role="tab" aria-selected="false" aria-controls="p3" id="t3"><span class="n">03</span> Jenkins</button>
+  <button role="tab" aria-selected="false" aria-controls="p4" id="t4"><span class="n">04</span> Files in this repo</button>
+  <button role="tab" aria-selected="false" aria-controls="p5" id="t5"><span class="n">05</span> Build commands</button>
+  <button role="tab" aria-selected="false" aria-controls="p6" id="t6"><span class="n">06</span> First run</button>
+  <button role="tab" aria-selected="false" aria-controls="p7" id="t7"><span class="n">07</span> When it breaks</button>
+</nav>
+
+<!-- ============================ 00 ============================ -->
+<section class="panel on" id="p0" role="tabpanel" aria-labelledby="t0">
+  <h2>What we are building, in plain words</h2>
+  <p class="lede">One Jenkins job. You pick Android or iOS, type the version and build number, press Build.
+  The job gets the code, gets the secret files, builds the app, and sends it to the store. Nobody types an
+  Apple password anywhere.</p>
+
+  <h3>The two Macs</h3>
+  <div class="grid2">
+    <div class="box">
+      <span class="badge dev">Development Mac</span>
+      <h4>The Mac you work on</h4>
+      <p>It has Xcode open, a keychain with your certificates, and a human at the keyboard. You use it
+      <strong>once</strong>, to collect the signing files. After that you never need it for the pipeline again.</p>
+    </div>
+    <div class="box">
+      <span class="badge pipe">Pipeline Mac</span>
+      <h4>The Mac that builds</h4>
+      <p>It runs the Jenkins agent. It has Xcode installed but <strong>never logs into an Apple account</strong>.
+      Every build brings its own certificate and profile, uses them, and deletes them.</p>
+    </div>
+  </div>
+
+  <h3>Who does what</h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Task</th><th>Development Mac</th><th>Pipeline Mac</th></tr></thead>
+    <tbody>
+      <tr><td>Create the App Store Connect API key</td><td>Yes — in a browser, once ever</td><td>No</td></tr>
+      <tr><td>Export the distribution certificate (.p12)</td><td>Yes — only this Mac has the private key</td><td>No</td></tr>
+      <tr><td>Create the provisioning profile in Apple's portal</td><td>Yes — once per app</td><td>No</td></tr>
+      <tr><td>Put the secrets in storage</td><td>Yes</td><td>No</td></tr>
+      <tr><td>Install Xcode, Homebrew, CocoaPods</td><td>Already there</td><td>Yes — full setup</td></tr>
+      <tr><td>Run the Jenkins agent</td><td>No</td><td>Yes</td></tr>
+      <tr><td>Sign in to Xcode with an Apple ID</td><td>Fine, you already are</td><td>Never</td></tr>
+      <tr><td>Build the app</td><td>No</td><td>Yes, every time</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>The five things iOS signing needs</h3>
+  <p>Logging into Xcode gives you all five by hand. We replace each one with something a script can use.</p>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Thing</th><th>Where it comes from</th><th>How often</th></tr></thead>
+    <tbody>
+      <tr><td class="k">dist.p12</td><td>Exported from the Development Mac keychain</td><td>Once a year (it expires)</td></tr>
+      <tr><td class="k">p12 password</td><td>You choose it during export</td><td>Once a year</td></tr>
+      <tr><td class="k">AuthKey.p8</td><td>App Store Connect → API key</td><td>Once ever</td></tr>
+      <tr><td class="k">Key ID + Issuer ID</td><td>Same page as the .p8</td><td>Once ever</td></tr>
+      <tr><td class="k">Provisioning profile</td><td>Downloaded from Apple <em>every build</em></td><td>Never touch it again</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lab">The whole idea</span>
+    <p>The profile is the part that expires fastest, so the build downloads a fresh one each time. The
+    certificate cannot be re-made each build — Apple allows only two or three — so it is stored once and
+    treated like a password.</p>
+  </div>
+
+  <h3>Order of work</h3>
+  <ul>
+    <li><strong>Tab 01</strong> — Development Mac. Collect the signing files. About 30 minutes, once ever.</li>
+    <li><strong>Tab 02</strong> — Pipeline Mac. Install the tools and the agent. About 45 minutes, once ever.</li>
+    <li><strong>Tab 03</strong> — Jenkins. Add credentials and the job. About 15 minutes.</li>
+    <li><strong>Tab 04</strong> — Add two script files and some settings to this repo.</li>
+    <li><strong>Tab 05 / 06</strong> — Run it by hand first, then from Jenkins.</li>
+  </ul>
+</section>
+
+<!-- ============================ 01 ============================ -->
+<section class="panel" id="p1" role="tabpanel" aria-labelledby="t1">
+  <span class="badge dev">Development Mac</span>
+  <h2 style="margin-top:12px">Collect the signing files</h2>
+  <p class="lede">Do all of this on the Mac where you normally open Xcode. You do it one time. Every future
+  project reuses the same files.</p>
+
+  <ol class="steps">
+
+    <li>
+      <div class="top"><strong>Check if you already have a distribution certificate</strong></div>
+      <p>Open Terminal and run this. It lists the signing identities in your keychain.</p>
+      <figure>
+        <figcaption><span>Terminal</span><button class="copy">copy</button></figcaption>
+        <pre>security find-identity -v -p codesigning | grep "Apple Distribution"</pre>
+      </figure>
+      <p>If you see a line with <span class="path">Apple Distribution: Your Company (TEAMID)</span>, go to step 2.</p>
+      <p>If nothing prints, someone in your team has it, or nobody made one yet. Ask first. If nobody has one:
+      open Xcode → Settings → Accounts → select the team → Manage Certificates → <strong>+</strong> →
+      Apple Distribution.</p>
+      <div class="note warn">
+        <span class="lab">Careful</span>
+        <p>Apple allows only two or three distribution certificates per account. Do not create a new one just
+        because you cannot find the old one — you can lock the whole team out. Ask a teammate for their .p12 instead.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="top"><strong>Create an App Store Connect API key</strong></div>
+      <p class="where">In a browser · appstoreconnect.apple.com</p>
+      <p>Go to <strong>Users and Access → Integrations → App Store Connect API</strong> and press the
+      <strong>+</strong> button. Name it <span class="path">CI Pipeline</span> and set the role to
+      <strong>App Manager</strong>.</p>
+      <p>Write down three things from that page:</p>
+      <ul>
+        <li><strong>Issuer ID</strong> — the long id at the top of the page, looks like <span class="path">69a6de7e-1234-4c5b-8f21-9a0bcdef1234</span></li>
+        <li><strong>Key ID</strong> — the short id in the row, looks like <span class="path">2X9R4HXF34</span></li>
+        <li><strong>The .p8 file</strong> — press Download</li>
+      </ul>
+      <div class="note warn">
+        <span class="lab">One chance only</span>
+        <p>The .p8 file downloads exactly once. If you lose it you must revoke the key and make a new one.
+        Save it somewhere safe before you close the page.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="top"><strong>Export the certificate as a .p12 file</strong></div>
+      <p class="where">Keychain Access app</p>
+      <p>This is the last time you use a window with buttons for signing.</p>
+      <ul>
+        <li>Open <strong>Keychain Access</strong></li>
+        <li>Click <strong>My Certificates</strong> in the sidebar</li>
+        <li>Find <span class="path">Apple Distribution: Your Company (TEAMID)</span></li>
+        <li>Click the small arrow next to it. You must see a <strong>private key</strong> underneath. If there is no key, this Mac cannot export it.</li>
+        <li>Right click the certificate → <strong>Export</strong></li>
+        <li>Format: <strong>Personal Information Exchange (.p12)</strong></li>
+        <li>Save as <span class="path">dist.p12</span> and set a password</li>
+      </ul>
+      <p><strong>Write that password down.</strong> You will paste it into Jenkins in step 7.</p>
+    </li>
+
+    <li>
+      <div class="top"><strong>Create the provisioning profile in Apple's portal</strong></div>
+      <p class="where">In a browser · developer.apple.com</p>
+      <ul>
+        <li>Go to <strong>Certificates, Identifiers &amp; Profiles → Profiles</strong></li>
+        <li>Press <strong>+</strong></li>
+        <li>Choose <strong>App Store Connect</strong> under Distribution</li>
+        <li>Pick your App ID (the bundle id of the app)</li>
+        <li>Pick the certificate from step 3</li>
+        <li>Give it a clear name, for example <span class="path">CM App AppStore</span>, and generate it</li>
+      </ul>
+      <div class="note">
+        <span class="lab">Do not download it</span>
+        <p>The profile only needs to <em>exist</em>. From now on the build downloads it from Apple every time,
+        so it can never go stale.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="top"><strong>Find the bundle id and the Team ID</strong></div>
+      <p>Run this inside the Flutter app repository (not this pipeline repository):</p>
+      <figure>
+        <figcaption><span>Terminal · in the Flutter app folder</span><button class="copy">copy</button></figcaption>
+        <pre>grep -r PRODUCT_BUNDLE_IDENTIFIER ios/Runner.xcodeproj/project.pbxproj | sort -u</pre>
+      </figure>
+      <p>The Team ID is the 10 character code on developer.apple.com → Membership, and it is also inside the
+      brackets of your certificate name.</p>
+    </li>
+
+    <li>
+      <div class="top"><strong>Put the two files into your S3 / R2 bucket</strong></div>
+      <p>This repository already downloads secret files from object storage — the keystore, the plists. The
+      .p8 and the .p12 are the same kind of thing, so they go to the same place. No base64, no new plumbing.</p>
+      <figure>
+        <figcaption><span>Terminal · Development Mac</span><button class="copy">copy</button></figcaption>
+        <pre>export AWS_ACCESS_KEY_ID="your access key id"
+export AWS_SECRET_ACCESS_KEY="your secret access key"
+export AWS_DEFAULT_REGION=auto
+ENDPOINT=https://&lt;account-id&gt;.r2.cloudflarestorage.com
+
+aws s3 cp AuthKey_2X9R4HXF34.p8 s3://com-chinmayamission-app/AuthKey.p8 --endpoint-url "$ENDPOINT"
+aws s3 cp dist.p12              s3://com-chinmayamission-app/dist.p12   --endpoint-url "$ENDPOINT"</pre>
+      </figure>
+      <p>Use the same bucket and the same endpoint that is already in
+      <span class="path">pipeline.properties</span>.</p>
+    </li>
+
+    <li>
+      <div class="top"><strong>Add the p12 password to Jenkins</strong></div>
+      <p class="where">In a browser · your Jenkins</p>
+      <p>Manage Jenkins → Credentials → add a <strong>Secret text</strong> credential.
+      ID: <span class="path">ios-p12-password</span>. Value: the password from step 3.</p>
+      <p>That is the only new credential you need. The Key ID and Issuer ID are not secrets — they go into
+      <span class="path">pipeline.properties</span> (see tab 04).</p>
+    </li>
+
+    <li>
+      <div class="top"><strong>Clean up and set one reminder</strong></div>
+      <figure>
+        <figcaption><span>Terminal · Development Mac</span><button class="copy">copy</button></figcaption>
+        <pre>rm -P dist.p12 AuthKey_2X9R4HXF34.p8</pre>
+      </figure>
+      <p>Then put one entry in your calendar, eleven months from today:
+      <strong>"re-export dist.p12, upload it again"</strong>. That is the only manual work left, forever.</p>
+    </li>
+
+  </ol>
+</section>
+
+<!-- ============================ 02 ============================ -->
+<section class="panel" id="p2" role="tabpanel" aria-labelledby="t2">
+  <span class="badge pipe">Pipeline Mac</span>
+  <h2 style="margin-top:12px">Set up the build machine</h2>
+  <p class="lede">A fresh Mac to a working Jenkins agent. Do these in order. Nothing here involves an Apple
+  account.</p>
+
+  <ol class="steps">
+
+    <li>
+      <div class="top"><strong>Make a real user account and log in on the screen</strong></div>
+      <p>Create a normal user, for example <span class="path">builder</span>. Log in on the physical screen at
+      least once, not only over SSH. macOS keychains behave differently without a real login session, and that
+      is the number one cause of builds that work in a terminal but fail in Jenkins.</p>
+      <p>Turn on automatic login: System Settings → Users &amp; Groups → Automatically log in as → builder.
+      Then stop the machine sleeping:</p>
+      <figure>
+        <figcaption><span>Terminal · Pipeline Mac</span><button class="copy">copy</button></figcaption>
+        <pre>sudo pmset -a sleep 0 displaysleep 0 disksleep 0
+sudo systemsetup -setremotelogin on          # so you can SSH in later</pre>
+      </figure>
+    </li>
+
+    <li>
+      <div class="top"><strong>Install Xcode and accept the licence</strong></div>
+      <p>Install Xcode from the App Store. Open it once so it finishes installing its components, then close it.
+      Now run these:</p>
+      <figure>
+        <figcaption><span>Terminal · Pipeline Mac</span><button class="copy">copy</button></figcaption>
+        <pre>sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+sudo xcodebuild -license accept
+sudo xcodebuild -runFirstLaunch
+xcodebuild -version</pre>
+      </figure>
+      <div class="note warn">
+        <span class="lab">Do not sign in</span>
+        <p>When Xcode asks for an Apple ID, close the window. This Mac must never have an Apple account.
+        Every build brings its own certificate and deletes it afterwards.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="top"><strong>Install Homebrew</strong></div>
+      <figure>
+        <figcaption><span>Terminal · Pipeline Mac</span><button class="copy">copy</button></figcaption>
+        <pre>/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Apple Silicon: add brew to your PATH
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' &gt;&gt; ~/.zprofile
+eval "$(/opt/homebrew/bin/brew shellenv)"</pre>
+      </figure>
+      <p>The pipeline installs <span class="path">fvm</span>, <span class="path">infisical</span> and
+      <span class="path">aws</span> by itself if they are missing — but only if Homebrew exists. So Homebrew is
+      not optional.</p>
+    </li>
+
+    <li>
+      <div class="top"><strong>Install the tools the pipeline cannot install for you</strong></div>
+      <figure>
+        <figcaption><span>Terminal · Pipeline Mac</span><button class="copy">copy</button></figcaption>
+        <pre>brew install git cocoapods
+brew install --cask temurin        # Java, needed by the Jenkins agent
+
+# optional: install now instead of waiting for the first build
+brew install fvm infisical awscli</pre>
+      </figure>
+      <div class="note">
+        <span class="lab">Why CocoaPods</span>
+        <p><span class="path">flutter build ios</span> runs <span class="path">pod install</span> underneath.
+        CocoaPods does not ship with macOS, and the pipeline does not install it, so put it on the machine now.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="top"><strong>Check the built-in tools are there</strong></div>
+      <p>These five come with macOS and Xcode. The build uses nothing else for signing.</p>
+      <figure>
+        <figcaption><span>Terminal · Pipeline Mac</span><button class="copy">copy</button></figcaption>
+        <pre>security   -h  &gt;/dev/null &amp;&amp; echo "security ok"
+xcrun --version
+python3 --version
+openssl version
+pod --version</pre>
+      </figure>
+    </li>
+
+    <li>
+      <div class="top"><strong>Create the node in Jenkins and download the agent</strong></div>
+      <p class="where">In a browser · your Jenkins</p>
+      <ul>
+        <li>Manage Jenkins → Nodes → <strong>New Node</strong></li>
+        <li>Name: <span class="path">mac-pipeline</span></li>
+        <li><strong>Labels: <span class="path">macos</span></strong> — this must match
+          <span class="path">agent { label 'macos' }</span> in the Jenkinsfile</li>
+        <li>Remote root directory: <span class="path">/Users/builder/jenkins-agent</span></li>
+        <li>Launch method: <strong>Launch agent by connecting it to the controller</strong></li>
+        <li>Save, open the node page, and copy the <span class="path">agent.jar</span> download link and the secret</li>
+      </ul>
+      <figure>
+        <figcaption><span>Terminal · Pipeline Mac</span><button class="copy">copy</button></figcaption>
+        <pre>mkdir -p ~/jenkins-agent/logs &amp;&amp; cd ~/jenkins-agent
+curl -fLO http://your-jenkins:8080/jnlpJars/agent.jar
+
+cat &gt; agent.args &lt;&lt;'ARGS'
+-url
+http://your-jenkins:8080/
+-name
+mac-pipeline
+-secret
+PASTE_THE_SECRET_HERE
+-workDir
+/Users/builder/jenkins-agent
+ARGS</pre>
+      </figure>
+    </li>
+
+    <li>
+      <div class="top"><strong>Start the agent as your logged-in user</strong></div>
+      <p>Create this file at
+      <span class="path">~/Library/LaunchAgents/com.jenkins.agent.plist</span>:</p>
+      <figure>
+        <figcaption><span>~/Library/LaunchAgents/com.jenkins.agent.plist</span><button class="copy">copy</button></figcaption>
+        <pre class="tall">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;
+&lt;dict&gt;
+  &lt;key&gt;Label&lt;/key&gt;&lt;string&gt;com.jenkins.agent&lt;/string&gt;
+  &lt;key&gt;ProgramArguments&lt;/key&gt;
+  &lt;array&gt;
+    &lt;string&gt;/usr/bin/java&lt;/string&gt;
+    &lt;string&gt;-jar&lt;/string&gt;
+    &lt;string&gt;/Users/builder/jenkins-agent/agent.jar&lt;/string&gt;
+    &lt;string&gt;@/Users/builder/jenkins-agent/agent.args&lt;/string&gt;
+  &lt;/array&gt;
+  &lt;key&gt;EnvironmentVariables&lt;/key&gt;
+  &lt;dict&gt;
+    &lt;key&gt;PATH&lt;/key&gt;
+    &lt;string&gt;/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/builder/.pub-cache/bin&lt;/string&gt;
+    &lt;key&gt;LANG&lt;/key&gt;&lt;string&gt;en_US.UTF-8&lt;/string&gt;
+    &lt;key&gt;LC_ALL&lt;/key&gt;&lt;string&gt;en_US.UTF-8&lt;/string&gt;
+    &lt;key&gt;ANDROID_HOME&lt;/key&gt;&lt;string&gt;/Users/builder/Library/Android/sdk&lt;/string&gt;
+  &lt;/dict&gt;
+  &lt;key&gt;WorkingDirectory&lt;/key&gt;&lt;string&gt;/Users/builder/jenkins-agent&lt;/string&gt;
+  &lt;key&gt;StandardOutPath&lt;/key&gt;&lt;string&gt;/Users/builder/jenkins-agent/logs/agent.out.log&lt;/string&gt;
+  &lt;key&gt;StandardErrorPath&lt;/key&gt;&lt;string&gt;/Users/builder/jenkins-agent/logs/agent.err.log&lt;/string&gt;
+  &lt;key&gt;RunAtLoad&lt;/key&gt;&lt;true/&gt;
+  &lt;key&gt;KeepAlive&lt;/key&gt;&lt;true/&gt;
+&lt;/dict&gt;
+&lt;/plist&gt;</pre>
+      </figure>
+      <figure>
+        <figcaption><span>Terminal · Pipeline Mac</span><button class="copy">copy</button></figcaption>
+        <pre>launchctl load -w ~/Library/LaunchAgents/com.jenkins.agent.plist
+launchctl list | grep jenkins
+tail -f ~/jenkins-agent/logs/agent.out.log</pre>
+      </figure>
+      <div class="note warn">
+        <span class="lab">The most common mistake</span>
+        <p>Put the file in <span class="path">~/Library/LaunchAgents</span> — a <strong>LaunchAgent</strong>, which
+        runs as you. Never in <span class="path">/Library/LaunchDaemons</span>. A daemon has no user session, and
+        signing will fail in ways that are very hard to read. Also: PATH must include
+        <span class="path">/opt/homebrew/bin</span>, or the build will not find brew, fvm or pod.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="top"><strong>Put this pipeline repository on the machine</strong></div>
+      <p>The Jenkinsfile reads its settings from an absolute path on the agent:</p>
+      <figure>
+        <figcaption><span>Jenkinsfile · line 12</span><button class="copy">copy</button></figcaption>
+        <pre>CONFIG_FILE = '/Users/macbook-pro-002/Desktop/release-pipeline/pipeline.properties'</pre>
+      </figure>
+      <p>So clone this repository on the Pipeline Mac and make the path match — or change that line to the
+      Pipeline Mac's path. Both work; pick one and keep it.</p>
+      <figure>
+        <figcaption><span>Terminal · Pipeline Mac</span><button class="copy">copy</button></figcaption>
+        <pre>git clone &lt;this-repo-url&gt; /Users/builder/release-pipeline
+chmod +x /Users/builder/release-pipeline/ci/ios_build.sh</pre>
+      </figure>
+    </li>
+
+    <li>
+      <div class="top"><strong>Open the network</strong></div>
+      <p>The Pipeline Mac must reach these on port 443:</p>
+      <ul>
+        <li><span class="path">api.appstoreconnect.apple.com</span> — the profile is downloaded every build</li>
+        <li><span class="path">*.r2.cloudflarestorage.com</span> — or whatever your S3 endpoint is</li>
+        <li><span class="path">app.infisical.com</span> — for the .env file</li>
+        <li><span class="path">gitlab.webelight.co.in</span> — the code</li>
+        <li>Apple's upload servers, for TestFlight</li>
+      </ul>
+      <p>If you clone over SSH you also need port 22 to GitLab. Inside the office that is usually open, outside it
+      usually is not — that is why <span class="path">GIT_PROTOCOL=https</span> is the safer default.</p>
+    </li>
+
+  </ol>
+</section>
+
+<!-- ============================ 03 ============================ -->
+<section class="panel" id="p3" role="tabpanel" aria-labelledby="t3">
+  <span class="badge web">In a browser</span>
+  <h2 style="margin-top:12px">Jenkins: credentials, node, job</h2>
+  <p class="lede">The Jenkinsfile never holds a secret. It holds the <em>name</em> of a secret, and Jenkins
+  hands the value over at build time.</p>
+
+  <h3>Credentials to create</h3>
+  <p>Manage Jenkins → Credentials → System → Global → Add Credentials. The ID on the left must match
+  exactly what is written in <span class="path">pipeline.properties</span>.</p>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>ID</th><th>Kind</th><th>What goes in it</th></tr></thead>
+    <tbody>
+      <tr><td class="k">gitlab-token</td><td>Username with password</td><td>Username <span class="path">oauth2</span>, password is the GitLab access token</td></tr>
+      <tr><td class="k">infisical-token</td><td>Secret text</td><td>The Infisical service token</td></tr>
+      <tr><td class="k">shorebird-token</td><td>Secret text</td><td>The Shorebird CI token</td></tr>
+      <tr><td class="k">r2-credentials</td><td>Username with password</td><td>Username is the Access Key ID, password is the Secret Access Key</td></tr>
+      <tr><td class="k">ios-p12-password</td><td>Secret text</td><td>The password you set when exporting dist.p12</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <span class="lab">Note</span>
+    <p>If you use <span class="path">GIT_PROTOCOL=ssh</span> instead, <span class="path">gitlab-token</span> must
+    be an <strong>SSH Username with private key</strong> credential with username <span class="path">git</span>.
+    The kind must always match the protocol.</p>
+  </div>
+
+  <h3>The node</h3>
+  <p>One node, label <span class="path">macos</span>, as created in tab 02. The Jenkinsfile starts with
+  <span class="path">agent { label 'macos' }</span>, so a wrong label means the job waits forever with no error.</p>
+
+  <h3>The job</h3>
+  <ul>
+    <li>New Item → <strong>Pipeline</strong> → name it, for example <span class="path">flutter-release-pipeline</span></li>
+    <li>Pipeline → Definition: <strong>Pipeline script from SCM</strong></li>
+    <li>SCM: Git → this repository → credentials → branch <span class="path">main</span></li>
+    <li>Script Path: <span class="path">Jenkinsfile</span></li>
+    <li>Save. Run it once — the first run fails or does nothing useful, but it registers the parameters</li>
+  </ul>
+  <p>After that first run the build page shows the four parameters the Jenkinsfile declares: PLATFORM,
+  BUILD_RUNNER, BUILD_VERSION, APP_BUILD_NUMBER.</p>
+
+  <h3>Add one more parameter</h3>
+  <p>Very useful while testing — build the IPA but do not upload it:</p>
+  <figure>
+    <figcaption><span>Jenkinsfile · parameters block</span><button class="copy">copy</button></figcaption>
+    <pre>booleanParam(
+    name: 'DO_UPLOAD',
+    defaultValue: false,
+    description: 'Send the build to TestFlight. Leave off to only produce the IPA.'
+)</pre>
+  </figure>
+</section>
+
+<!-- ============================ 04 ============================ -->
+<section class="panel" id="p4" role="tabpanel" aria-labelledby="t4">
+  <span class="badge dev">Development Mac</span>
+  <h2 style="margin-top:12px">What to add to this repository</h2>
+  <p class="lede">Four changes: new settings, two script files, and one new stage in the Jenkinsfile. Write them
+  here, commit, and the Pipeline Mac picks them up on the next pull.</p>
+
+  <h3>1. New lines in <span class="path">pipeline.properties</span></h3>
+  <figure>
+    <figcaption><span>pipeline.properties · add at the end</span><button class="copy">copy</button></figcaption>
+    <pre># ---------------------------------------------------------------------------
+# iOS signing. Nothing here is a secret: ids and names only.
+# ---------------------------------------------------------------------------
+
+# Bundle id of the app, exactly as it is in Xcode.
+IOS_APP_IDENTIFIER=com.chinmayamission.app
+
+# 10 character Apple team id, from developer.apple.com > Membership.
+IOS_TEAM_ID=ABCDE12345
+
+# Xcode scheme and build configuration. Run this in the app repo to see them:
+#   xcodebuild -list -workspace ios/Runner.xcworkspace
+IOS_SCHEME=Runner
+IOS_XCODE_CONFIG=Release
+
+# Flutter flavor, if the project uses one. Leave empty if it does not.
+IOS_FLAVOR=prod
+
+# App Store Connect API key. These two are identifiers, not passwords.
+IOS_ASC_KEY_ID=2X9R4HXF34
+IOS_ASC_ISSUER_ID=69a6de7e-1234-4c5b-8f21-9a0bcdef1234
+
+# IOS_APP_STORE for TestFlight and the store, IOS_APP_ADHOC for internal test builds.
+IOS_PROFILE_TYPE=IOS_APP_STORE
+
+# Xcode 16 and newer: app-store-connect.  Xcode 15 and older: app-store.
+IOS_EXPORT_METHOD=app-store-connect
+
+# Jenkins credential holding the .p12 password. Kind: Secret text.
+IOS_P12_PASSWORD_CREDENTIALS_ID=ios-p12-password
+
+# The two signing files, pulled from storage like every other secret file.
+SECRET_FILE.ci/AuthKey.p8=s3://com-chinmayamission-app/AuthKey.p8
+SECRET_FILE.ci/dist.p12=s3://com-chinmayamission-app/dist.p12</pre>
+  </figure>
+
+  <h3>2. <span class="path">ci/fetch_profile.py</span></h3>
+  <p>Asks Apple for the provisioning profile and writes it into both folders Xcode looks in. Uses only Python
+  and openssl, both already on the Mac.</p>
+  <figure>
+    <figcaption><span>ci/fetch_profile.py</span><button class="copy">copy</button></figcaption>
+    <pre class="tall">#!/usr/bin/env python3
+"""
+Downloads the provisioning profile for one bundle id from the
+App Store Connect API. No third-party packages: stdlib + openssl only.
+
+Reads from environment:
+  ASC_KEY_ID        Key ID from App Store Connect
+  ASC_ISSUER_ID     Issuer ID from App Store Connect
+  P8_PATH           Path to the AuthKey_XXXX.p8 file
+  APP_IDENTIFIER    Bundle id, e.g. com.acme.app
+  PROFILE_TYPE      IOS_APP_STORE or IOS_APP_ADHOC
+  OUT_DIRS          JSON list of folders to write the profile into
+  ENV_OUT           Path to write PROFILE_NAME / PROFILE_UUID / PROFILE_FILE
+"""
+import base64
+import json
+import os
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+
+API = "https://api.appstoreconnect.apple.com"
+
+
+def need(name):
+    v = os.environ.get(name)
+    if not v:
+        sys.exit("fetch_profile: missing environment variable " + name)
+    return v
+
+
+KEY_ID = need("ASC_KEY_ID")
+ISSUER = need("ASC_ISSUER_ID")
+P8 = need("P8_PATH")
+BUNDLE = need("APP_IDENTIFIER")
+PTYPE = os.environ.get("PROFILE_TYPE", "IOS_APP_STORE")
+OUT_DIRS = json.loads(need("OUT_DIRS"))
+ENV_OUT = need("ENV_OUT")
+
+
+def b64url(raw):
+    return base64.urlsafe_b64encode(raw).rstrip(b"=")
+
+
+def der_to_raw(der):
+    """openssl signs ES256 as DER. Apple wants raw r||s, 64 bytes."""
+    if der[0] != 0x30:
+        sys.exit("fetch_profile: unexpected signature format from openssl")
+    idx = 2 + ((der[1] &amp; 0x7F) if der[1] &amp; 0x80 else 0)
+    out = b""
+    for _ in range(2):
+        if der[idx] != 0x02:
+            sys.exit("fetch_profile: unexpected signature format from openssl")
+        length = der[idx + 1]
+        value = der[idx + 2:idx + 2 + length].lstrip(b"\x00")
+        out += value.rjust(32, b"\x00")
+        idx += 2 + length
+    return out
+
+
+def make_token():
+    now = int(time.time())
+    header = {"alg": "ES256", "kid": KEY_ID, "typ": "JWT"}
+    payload = {"iss": ISSUER, "iat": now, "exp": now + 900,
+               "aud": "appstoreconnect-v1"}
+    signing_input = (
+        b64url(json.dumps(header, separators=(",", ":")).encode())
+        + b"."
+        + b64url(json.dumps(payload, separators=(",", ":")).encode())
+    )
+    result = subprocess.run(
+        ["openssl", "dgst", "-sha256", "-sign", P8, "-binary"],
+        input=signing_input, capture_output=True,
+    )
+    if result.returncode != 0:
+        sys.exit("fetch_profile: openssl could not sign. Is the .p8 valid?\n"
+                 + result.stderr.decode()[:400])
+    return (signing_input + b"." + b64url(der_to_raw(result.stdout))).decode()
+
+
+def api_get(path, token):
+    request = urllib.request.Request(
+        API + path, headers={"Authorization": "Bearer " + token})
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            return json.load(response)
+    except urllib.error.HTTPError as error:
+        sys.exit("fetch_profile: API call failed (%s)\n%s"
+                 % (error.code, error.read().decode()[:500]))
+    except urllib.error.URLError as error:
+        sys.exit("fetch_profile: network error: %s" % error.reason)
+
+
+token = make_token()
+data = api_get(
+    "/v1/profiles?include=bundleId&amp;limit=200"
+    "&amp;fields[profiles]=name,uuid,profileType,profileState,profileContent",
+    token,
+)
+
+bundle_names = {
+    item["id"]: item["attributes"]["identifier"]
+    for item in data.get("included", [])
+    if item["type"] == "bundleIds"
+}
+
+chosen = None
+for profile in data.get("data", []):
+    attrs = profile["attributes"]
+    rel = profile.get("relationships", {}).get("bundleId", {}).get("data") or {}
+    if (attrs.get("profileType") == PTYPE
+            and attrs.get("profileState") == "ACTIVE"
+            and bundle_names.get(rel.get("id")) == BUNDLE):
+        chosen = attrs
+        break
+
+if not chosen:
+    sys.exit("fetch_profile: no ACTIVE %s profile found for %s.\n"
+             "Create it once by hand at developer.apple.com &gt; Profiles, then re-run."
+             % (PTYPE, BUNDLE))
+
+blob = base64.b64decode(chosen["profileContent"])
+filename = "ci_%s.mobileprovision" % chosen["uuid"]
+for folder in OUT_DIRS:
+    os.makedirs(folder, exist_ok=True)
+    with open(os.path.join(folder, filename), "wb") as handle:
+        handle.write(blob)
+
+with open(ENV_OUT, "w") as handle:
+    handle.write("PROFILE_NAME=%s\n" % json.dumps(chosen["name"]))
+    handle.write("PROFILE_UUID=%s\n" % json.dumps(chosen["uuid"]))
+    handle.write("PROFILE_FILE=%s\n" % json.dumps(filename))
+
+print("fetch_profile: using '%s' (%s)" % (chosen["name"], chosen["uuid"]))</pre>
+  </figure>
+
+  <h3>3. <span class="path">ci/ios_build.sh</span></h3>
+  <p>The whole iOS build. Six steps, then a cleanup that always runs. Note three things that are different
+  from a generic script: it uses <strong>fvm flutter</strong> so the pinned SDK is used, it takes the
+  <strong>.p12 and .p8 as files</strong> because the pipeline already downloads them, and it builds in
+  <strong>APP_DIR</strong> because the app lives in the Jenkins workspace while this script lives in the
+  pipeline repo.</p>
+  <figure>
+    <figcaption><span>ci/ios_build.sh</span><button class="copy">copy</button></figcaption>
+    <pre class="tall">#!/usr/bin/env bash
+# ---------------------------------------------------------------------------
+# ios_build.sh - build a Flutter iOS app and send it to TestFlight.
+# No Apple ID login on this machine.
+# Uses only: security, xcodebuild, xcrun, python3, openssl, fvm flutter, pod.
+# ---------------------------------------------------------------------------
+set -euo pipefail
+
+# ------------------------------ inputs -------------------------------------
+APP_DIR="${APP_DIR:?set APP_DIR: the folder that holds pubspec.yaml}"
+APP_IDENTIFIER="${APP_IDENTIFIER:?set APP_IDENTIFIER, e.g. com.acme.app}"
+TEAM_ID="${TEAM_ID:?set TEAM_ID, e.g. ABCDE12345}"
+SCHEME="${SCHEME:-Runner}"
+XCODE_CONFIG="${XCODE_CONFIG:-Release}"
+FLUTTER_FLAVOR="${FLUTTER_FLAVOR:-}"
+PROFILE_TYPE="${PROFILE_TYPE:-IOS_APP_STORE}"
+EXPORT_METHOD="${EXPORT_METHOD:-app-store-connect}"   # Xcode 15 or older: app-store
+BUILD_NAME="${BUILD_NAME:?set BUILD_NAME, e.g. 1.0.0}"
+BUILD_NUMBER="${BUILD_NUMBER:?set BUILD_NUMBER, e.g. 32}"
+DO_UPLOAD="${DO_UPLOAD:-false}"
+FLUTTER="${FLUTTER:-fvm flutter}"
+
+# ------------------------------ secrets ------------------------------------
+ASC_KEY_ID="${ASC_KEY_ID:?missing ASC_KEY_ID}"
+ASC_ISSUER_ID="${ASC_ISSUER_ID:?missing ASC_ISSUER_ID}"
+P8_PATH="${P8_PATH:?missing P8_PATH, the AuthKey.p8 file}"
+P12_PATH="${P12_PATH:?missing P12_PATH, the dist.p12 file}"
+IOS_P12_PASSWORD="${IOS_P12_PASSWORD:?missing IOS_P12_PASSWORD}"
+
+# ------------------------------- paths -------------------------------------
+CI_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &amp;&amp; pwd)"
+cd "$APP_DIR"
+WORK="$APP_DIR/build/ci"
+ARCHIVE="$WORK/$SCHEME.xcarchive"
+IPA_DIR="$WORK/ipa"
+KEYCHAIN="$HOME/Library/Keychains/ci-signing-$$.keychain-db"
+KEYCHAIN_PW="$(openssl rand -base64 24)"
+LOGIN_KEYCHAIN="$HOME/Library/Keychains/login.keychain-db"
+PROFILE_DIR_NEW="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
+PROFILE_DIR_OLD="$HOME/Library/MobileDevice/Provisioning Profiles"
+export LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+
+rm -rf "$WORK"; mkdir -p "$WORK" "$IPA_DIR"
+step() { printf '\n=== %s\n' "$1"; }
+
+# --------------------------- always clean up -------------------------------
+# This Mac is not thrown away after the build, unlike a cloud runner.
+# Without this, keychains and profiles pile up and one day sign the wrong app.
+INSTALLED_PROFILE=""
+cleanup() {
+  set +e
+  step "cleanup"
+  security list-keychains -d user -s "$LOGIN_KEYCHAIN" &gt;/dev/null 2&gt;&amp;1
+  security delete-keychain "$KEYCHAIN" &gt;/dev/null 2&gt;&amp;1
+  if [ -n "$INSTALLED_PROFILE" ]; then
+    rm -f "$PROFILE_DIR_NEW/$INSTALLED_PROFILE" "$PROFILE_DIR_OLD/$INSTALLED_PROFILE"
+  fi
+  rm -f "$P12_PATH" "$P8_PATH"
+  rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_$ASC_KEY_ID.p8"
+}
+trap cleanup EXIT
+
+# ========================= 1. certificate ==================================
+step "1/6 installing the certificate into a throwaway keychain"
+security create-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+security set-keychain-settings -lut 21600 "$KEYCHAIN"
+security unlock-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+security import "$P12_PATH" -k "$KEYCHAIN" -P "$IOS_P12_PASSWORD" \
+  -T /usr/bin/codesign -T /usr/bin/security -f pkcs12 -A
+
+# The line everyone forgets. Without it codesign tries to open a password
+# window and you get "User interaction is not allowed".
+security set-key-partition-list -S apple-tool:,apple:,codesign: \
+  -s -k "$KEYCHAIN_PW" "$KEYCHAIN" &gt;/dev/null
+
+security list-keychains -d user -s "$KEYCHAIN" "$LOGIN_KEYCHAIN"
+security find-identity -v -p codesigning "$KEYCHAIN"
+
+if ! security find-identity -v -p codesigning "$KEYCHAIN" | grep -q "Apple Distribution"; then
+  echo "No Apple Distribution identity found. Wrong .p12 or wrong password." &gt;&amp;2
+  exit 1
+fi
+
+# ========================= 2. profile ======================================
+step "2/6 downloading the provisioning profile from Apple"
+chmod 600 "$P8_PATH"
+P8_PATH="$P8_PATH" \
+APP_IDENTIFIER="$APP_IDENTIFIER" \
+PROFILE_TYPE="$PROFILE_TYPE" \
+OUT_DIRS="$(printf '["%s","%s"]' "$PROFILE_DIR_NEW" "$PROFILE_DIR_OLD")" \
+ENV_OUT="$WORK/profile.env" \
+python3 "$CI_DIR/fetch_profile.py"
+
+# shellcheck disable=SC1090
+source "$WORK/profile.env"
+INSTALLED_PROFILE="$PROFILE_FILE"
+
+# ========================= 3. flutter ======================================
+step "3/6 compiling the Flutter code, unsigned"
+$FLUTTER --version
+$FLUTTER clean
+$FLUTTER pub get
+$FLUTTER build ios --release --no-codesign \
+  --build-name="$BUILD_NAME" \
+  --build-number="$BUILD_NUMBER" \
+  ${FLUTTER_FLAVOR:+--flavor "$FLUTTER_FLAVOR"}
+
+# ========================= 4. archive ======================================
+step "4/6 archiving with manual signing"
+xcodebuild archive \
+  -workspace "ios/Runner.xcworkspace" \
+  -scheme "$SCHEME" \
+  -configuration "$XCODE_CONFIG" \
+  -sdk iphoneos \
+  -destination 'generic/platform=iOS' \
+  -archivePath "$ARCHIVE" \
+  -quiet \
+  CODE_SIGN_STYLE=Manual \
+  DEVELOPMENT_TEAM="$TEAM_ID" \
+  CODE_SIGN_IDENTITY="Apple Distribution" \
+  PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+  OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN"
+
+# ========================= 5. export =======================================
+# Flutter's own plist has only method and uploadBitcode. Manual signing needs
+# teamID and a provisioningProfiles map, so we write our own.
+step "5/6 exporting the ipa"
+cat &gt; "$WORK/ExportOptions.plist" &lt;&lt;PLIST
+&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;
+&lt;dict&gt;
+  &lt;key&gt;method&lt;/key&gt;&lt;string&gt;$EXPORT_METHOD&lt;/string&gt;
+  &lt;key&gt;teamID&lt;/key&gt;&lt;string&gt;$TEAM_ID&lt;/string&gt;
+  &lt;key&gt;signingStyle&lt;/key&gt;&lt;string&gt;manual&lt;/string&gt;
+  &lt;key&gt;signingCertificate&lt;/key&gt;&lt;string&gt;Apple Distribution&lt;/string&gt;
+  &lt;key&gt;uploadSymbols&lt;/key&gt;&lt;true/&gt;
+  &lt;key&gt;stripSwiftSymbols&lt;/key&gt;&lt;true/&gt;
+  &lt;key&gt;destination&lt;/key&gt;&lt;string&gt;export&lt;/string&gt;
+  &lt;key&gt;provisioningProfiles&lt;/key&gt;
+  &lt;dict&gt;
+    &lt;key&gt;$APP_IDENTIFIER&lt;/key&gt;&lt;string&gt;$PROFILE_NAME&lt;/string&gt;
+  &lt;/dict&gt;
+&lt;/dict&gt;
+&lt;/plist&gt;
+PLIST
+
+xcodebuild -exportArchive \
+  -archivePath "$ARCHIVE" \
+  -exportPath "$IPA_DIR" \
+  -exportOptionsPlist "$WORK/ExportOptions.plist" \
+  -allowProvisioningUpdates \
+  -authenticationKeyPath "$P8_PATH" \
+  -authenticationKeyID "$ASC_KEY_ID" \
+  -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+IPA_PATH="$(ls "$IPA_DIR"/*.ipa | head -n1)"
+echo "ipa ready: $IPA_PATH"
+codesign -dv --verbose=4 "$ARCHIVE/Products/Applications/$SCHEME.app" 2&gt;&amp;1 \
+  | grep -E "Authority|TeamIdentifier" || true
+
+# ========================= 6. upload =======================================
+if [ "$DO_UPLOAD" = "true" ]; then
+  step "6/6 uploading to App Store Connect"
+  mkdir -p "$HOME/.appstoreconnect/private_keys"
+  cp "$P8_PATH" "$HOME/.appstoreconnect/private_keys/AuthKey_$ASC_KEY_ID.p8"
+  xcrun altool --validate-app -f "$IPA_PATH" -t ios \
+    --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+  xcrun altool --upload-app -f "$IPA_PATH" -t ios \
+    --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+  echo "uploaded. Watch the Activity tab in App Store Connect."
+else
+  step "6/6 upload skipped, DO_UPLOAD is false"
+fi
+
+step "done: $BUILD_NAME ($BUILD_NUMBER)"</pre>
+  </figure>
+
+  <h3>4. The new stage in the <span class="path">Jenkinsfile</span></h3>
+  <p>Add it after <strong>Load Secret Files</strong>. It only runs when the user picked iOS.</p>
+  <figure>
+    <figcaption><span>Jenkinsfile · new stage</span><button class="copy">copy</button></figcaption>
+    <pre class="tall">stage('Build iOS') {
+    when { expression { params.PLATFORM == 'iOS' } }
+    steps {
+        script {
+            section('🍎  Build iOS')
+
+            String pipelineDir = env.CONFIG_FILE.substring(0, env.CONFIG_FILE.lastIndexOf('/'))
+
+            withCredentials([string(
+                credentialsId: projectConfig.get('IOS_P12_PASSWORD_CREDENTIALS_ID'),
+                variable: 'IOS_P12_PASSWORD'
+            )]) {
+                withEnv([
+                    "APP_DIR=${env.WORKSPACE}",
+                    "APP_IDENTIFIER=${projectConfig.get('IOS_APP_IDENTIFIER')}",
+                    "TEAM_ID=${projectConfig.get('IOS_TEAM_ID')}",
+                    "SCHEME=${projectConfig.get('IOS_SCHEME')}",
+                    "XCODE_CONFIG=${projectConfig.get('IOS_XCODE_CONFIG')}",
+                    "FLUTTER_FLAVOR=${projectConfig.get('IOS_FLAVOR') ?: ''}",
+                    "PROFILE_TYPE=${projectConfig.get('IOS_PROFILE_TYPE')}",
+                    "EXPORT_METHOD=${projectConfig.get('IOS_EXPORT_METHOD')}",
+                    "ASC_KEY_ID=${projectConfig.get('IOS_ASC_KEY_ID')}",
+                    "ASC_ISSUER_ID=${projectConfig.get('IOS_ASC_ISSUER_ID')}",
+                    "P8_PATH=${env.WORKSPACE}/ci/AuthKey.p8",
+                    "P12_PATH=${env.WORKSPACE}/ci/dist.p12",
+                    "BUILD_NAME=${params.BUILD_VERSION}",
+                    "BUILD_NUMBER=${params.APP_BUILD_NUMBER}",
+                    "DO_UPLOAD=${params.DO_UPLOAD}"
+                ]) {
+                    sh "'${pipelineDir}/ci/ios_build.sh'"
+                }
+            }
+
+            archiveArtifacts artifacts: 'build/ci/ipa/*.ipa', allowEmptyArchive: true
+        }
+    }
+}</pre>
+  </figure>
+  <div class="note">
+    <span class="lab">Why the script lives here and not in the app repo</span>
+    <p>The Jenkins job clones the app fresh every build. If the scripts lived in the app repo you would have
+    to copy them into every project and keep them in sync. One copy in this repo, called by absolute path,
+    serves every app.</p>
+  </div>
+</section>
+
+<!-- ============================ 05 ============================ -->
+<section class="panel" id="p5" role="tabpanel" aria-labelledby="t5">
+  <h2>The build commands</h2>
+  <p class="lede">Every command the pipeline fires, and the same commands to run by hand when you want to see
+  what is happening.</p>
+
+  <h3>First: find your scheme and flavor</h3>
+  <p>If the project has flavors, the scheme is usually not <span class="path">Runner</span>. Check before you
+  fill in <span class="path">pipeline.properties</span>:</p>
+  <figure>
+    <figcaption><span>Terminal · in the Flutter app folder</span><button class="copy">copy</button></figcaption>
+    <pre>xcodebuild -list -workspace ios/Runner.xcworkspace</pre>
+  </figure>
+  <p>It prints the schemes and the build configurations. A project with a <span class="path">prod</span> flavor
+  usually has scheme <span class="path">prod</span> and configuration <span class="path">Release-prod</span>.
+  The names in the output are the names you put in the settings file.</p>
+
+  <h3>Flutter, with the pinned SDK</h3>
+  <p>The pipeline pins Flutter with FVM, so always say <span class="path">fvm flutter</span>, never plain
+  <span class="path">flutter</span>. Plain <span class="path">flutter</span> uses whatever SDK happens to be on
+  the machine, and the build silently differs from the pipeline.</p>
+  <figure>
+    <figcaption><span>Setting up the SDK</span><button class="copy">copy</button></figcaption>
+    <pre>fvm install 3.44.6 --setup      # download the exact version
+fvm use 3.44.6 --force          # pin this folder to it
+fvm flutter --version           # confirm</pre>
+  </figure>
+
+  <h3>iOS</h3>
+  <figure>
+    <figcaption><span>iOS build commands, in order</span><button class="copy">copy</button></figcaption>
+    <pre># 1. clean and get packages
+fvm flutter clean
+fvm flutter pub get
+
+# 2. compile, unsigned. Xcode does the signing later, not Flutter.
+fvm flutter build ios --release --no-codesign \
+  --build-name=1.0.0 \
+  --build-number=32 \
+  --flavor prod
+
+# 3. archive, signing by hand with the downloaded profile
+xcodebuild archive \
+  -workspace ios/Runner.xcworkspace \
+  -scheme prod \
+  -configuration Release-prod \
+  -sdk iphoneos \
+  -destination 'generic/platform=iOS' \
+  -archivePath build/ci/prod.xcarchive \
+  CODE_SIGN_STYLE=Manual \
+  DEVELOPMENT_TEAM=ABCDE12345 \
+  CODE_SIGN_IDENTITY="Apple Distribution" \
+  PROVISIONING_PROFILE_SPECIFIER="CM App AppStore"
+
+# 4. export the .ipa
+xcodebuild -exportArchive \
+  -archivePath build/ci/prod.xcarchive \
+  -exportPath build/ci/ipa \
+  -exportOptionsPlist build/ci/ExportOptions.plist
+
+# 5. upload to TestFlight
+xcrun altool --upload-app -f build/ci/ipa/*.ipa -t ios \
+  --apiKey 2X9R4HXF34 \
+  --apiIssuer 69a6de7e-1234-4c5b-8f21-9a0bcdef1234</pre>
+  </figure>
+  <div class="note">
+    <span class="lab">Do not run pod install yourself</span>
+    <p><span class="path">flutter build ios</span> runs <span class="path">pod install</span> for you. Running it
+    again by hand only adds a minute to every build.</p>
+  </div>
+
+  <h3>Android</h3>
+  <figure>
+    <figcaption><span>Android build commands</span><button class="copy">copy</button></figcaption>
+    <pre># Play Store upload file
+fvm flutter build appbundle --release \
+  --build-name=1.0.0 --build-number=32 --flavor prod
+
+# a plain apk, for testers who install by hand
+fvm flutter build apk --release \
+  --build-name=1.0.0 --build-number=32 --flavor prod
+
+# output lands in:
+#   build/app/outputs/bundle/prodRelease/app-prod-release.aab
+#   build/app/outputs/flutter-apk/app-prod-release.apk</pre>
+  </figure>
+  <p>Android signing needs <span class="path">android/key.properties</span> and
+  <span class="path">android/cm-app.jks</span> — the pipeline already downloads both from storage before this
+  step runs.</p>
+
+  <h3>Shorebird (code push)</h3>
+  <p>The job has a <span class="path">BUILD_RUNNER</span> choice. Shorebird does its own build, so it replaces
+  the Flutter commands rather than adding to them.</p>
+  <figure>
+    <figcaption><span>Shorebird</span><button class="copy">copy</button></figcaption>
+    <pre># a new release: a full build that users install from the store
+shorebird release ios --flavor prod -- --build-name=1.0.0 --build-number=32
+shorebird release android --flavor prod -- --build-name=1.0.0 --build-number=32
+
+# a patch: the code push, no store review
+shorebird patch ios --release-version 1.0.0+32 --flavor prod
+shorebird patch android --release-version 1.0.0+32 --flavor prod</pre>
+  </figure>
+  <p>Shorebird reads the token from <span class="path">SHOREBIRD_TOKEN</span> in the environment, which comes
+  from the Jenkins credential named in <span class="path">pipeline.properties</span>. The signing setup in this
+  guide still applies to <span class="path">shorebird release ios</span> — it archives with Xcode underneath.</p>
+
+  <h3>Run the whole thing by hand</h3>
+  <figure>
+    <figcaption><span>Terminal · Pipeline Mac</span><button class="copy">copy</button></figcaption>
+    <pre>export APP_DIR=/Users/builder/jenkins-agent/workspace/flutter-release-pipeline
+export APP_IDENTIFIER=com.chinmayamission.app
+export TEAM_ID=ABCDE12345
+export SCHEME=prod
+export XCODE_CONFIG=Release-prod
+export FLUTTER_FLAVOR=prod
+export ASC_KEY_ID=2X9R4HXF34
+export ASC_ISSUER_ID=69a6de7e-1234-4c5b-8f21-9a0bcdef1234
+export P8_PATH=$APP_DIR/ci/AuthKey.p8
+export P12_PATH=$APP_DIR/ci/dist.p12
+export IOS_P12_PASSWORD='the password'
+export BUILD_NAME=1.0.0
+export BUILD_NUMBER=32
+export DO_UPLOAD=false
+
+/Users/builder/release-pipeline/ci/ios_build.sh</pre>
+  </figure>
+  <div class="note warn">
+    <span class="lab">Keep DO_UPLOAD off at first</span>
+    <p>Run it two or three times with <span class="path">DO_UPLOAD=false</span>. You get a real .ipa to look at,
+    and you do not burn build numbers on App Store Connect. Each build number can be uploaded only once, ever.</p>
+  </div>
+</section>
+
+<!-- ============================ 06 ============================ -->
+<section class="panel" id="p6" role="tabpanel" aria-labelledby="t6">
+  <h2>The first run, in order</h2>
+  <p class="lede">Do not wire everything up and press Build. Prove each layer works before adding the next one.
+  When something breaks you then know exactly which layer did it.</p>
+
+  <ol class="steps">
+    <li>
+      <div class="top"><strong>Prove the tools</strong></div>
+      <p class="where">Pipeline Mac · a normal terminal, logged in as the agent user</p>
+      <figure>
+        <figcaption><span>Terminal</span><button class="copy">copy</button></figcaption>
+        <pre>xcodebuild -version &amp;&amp; pod --version &amp;&amp; python3 -V &amp;&amp; openssl version &amp;&amp; fvm --version</pre>
+      </figure>
+      <p>All five must print something. If any fails, go back to tab 02.</p>
+    </li>
+
+    <li>
+      <div class="top"><strong>Prove Apple answers</strong></div>
+      <p>Put the .p8 somewhere temporary and run only the profile downloader. This checks the API key, the
+      Issuer ID, the bundle id and the profile all at once, in about two seconds.</p>
+      <figure>
+        <figcaption><span>Terminal</span><button class="copy">copy</button></figcaption>
+        <pre>ASC_KEY_ID=2X9R4HXF34 \
+ASC_ISSUER_ID=69a6de7e-1234-4c5b-8f21-9a0bcdef1234 \
+P8_PATH=/tmp/AuthKey.p8 \
+APP_IDENTIFIER=com.chinmayamission.app \
+PROFILE_TYPE=IOS_APP_STORE \
+OUT_DIRS='["/tmp/profiles"]' \
+ENV_OUT=/tmp/profile.env \
+python3 ci/fetch_profile.py</pre>
+      </figure>
+      <p>Success looks like: <span class="path">fetch_profile: using 'CM App AppStore' (uuid…)</span></p>
+    </li>
+
+    <li>
+      <div class="top"><strong>Prove the certificate</strong></div>
+      <figure>
+        <figcaption><span>Terminal</span><button class="copy">copy</button></figcaption>
+        <pre>security create-keychain -p test /tmp/test.keychain-db
+security import dist.p12 -k /tmp/test.keychain-db -P 'your password' -f pkcs12 -A
+security find-identity -v -p codesigning /tmp/test.keychain-db
+security delete-keychain /tmp/test.keychain-db</pre>
+      </figure>
+      <p>You must see one line saying <strong>Apple Distribution</strong>. If you see
+      <span class="path">Apple Development</span> instead, you exported the wrong certificate.</p>
+    </li>
+
+    <li>
+      <div class="top"><strong>Run the full script by hand, no upload</strong></div>
+      <p>Use the block at the bottom of tab 05, with <span class="path">DO_UPLOAD=false</span>. This is the run
+      that finds most problems. Expect it to take 10–20 minutes the first time.</p>
+    </li>
+
+    <li>
+      <div class="top"><strong>Run it from Jenkins, no upload</strong></div>
+      <p>Now the same thing, triggered from the job. If step 4 worked and this does not, the problem is
+      environment: PATH in the LaunchAgent plist, or the agent running as a daemon instead of as your user.</p>
+    </li>
+
+    <li>
+      <div class="top"><strong>Turn the upload on</strong></div>
+      <p>Tick DO_UPLOAD. Watch <strong>App Store Connect → your app → TestFlight → Activity</strong>. Processing
+      takes 5 to 30 minutes after the upload finishes. An email arrives if Apple rejects the build.</p>
+    </li>
+  </ol>
+
+  <h3>What a good run looks like in the log</h3>
+  <figure>
+    <figcaption><span>Console output</span><button class="copy">copy</button></figcaption>
+    <pre>=== 1/6 installing the certificate into a throwaway keychain
+  1) A1B2C3… "Apple Distribution: Your Company (ABCDE12345)"
+=== 2/6 downloading the provisioning profile from Apple
+fetch_profile: using 'CM App AppStore' (7f3c…)
+=== 3/6 compiling the Flutter code, unsigned
+=== 4/6 archiving with manual signing
+=== 5/6 exporting the ipa
+ipa ready: /Users/builder/…/build/ci/ipa/prod.ipa
+Authority=Apple Distribution: Your Company (ABCDE12345)
+TeamIdentifier=ABCDE12345
+=== 6/6 uploading to App Store Connect
+=== cleanup
+=== done: 1.0.0 (32)</pre>
+  </figure>
+</section>
+
+<!-- ============================ 07 ============================ -->
+<section class="panel" id="p7" role="tabpanel" aria-labelledby="t7">
+  <h2>When it breaks</h2>
+  <p class="lede">Almost every failure is one of these eight. The message on the left, the real cause on the right.</p>
+
+  <div class="scroll">
+  <table>
+    <thead><tr><th>What you see</th><th>What it means and what to do</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="err">User interaction is not allowed</td>
+        <td>The <span class="path">set-key-partition-list</span> line did not run, or the keychain password did
+        not match. macOS wants to show a password window and there is nobody to click it.</td>
+      </tr>
+      <tr>
+        <td class="err">errSecInternalComponent</td>
+        <td>Same cause, different words. Check the partition list line and that the keychain is unlocked.</td>
+      </tr>
+      <tr>
+        <td class="err">No signing certificate "iOS Distribution" found</td>
+        <td>The certificate went into one keychain and xcodebuild looked in another. Run
+        <span class="path">security find-identity -v -p codesigning</span> to see what is actually visible.</td>
+      </tr>
+      <tr>
+        <td class="err">no ACTIVE profile found for &lt;bundle id&gt;</td>
+        <td>The profile does not exist, or its type is different. Create it once in the portal, and check that
+        <span class="path">IOS_PROFILE_TYPE</span> matches what you made.</td>
+      </tr>
+      <tr>
+        <td class="err">exportArchive failed, no useful message</td>
+        <td>Nearly always an incomplete ExportOptions.plist. On Xcode 15 or older set
+        <span class="path">IOS_EXPORT_METHOD=app-store</span> instead of <span class="path">app-store-connect</span>.</td>
+      </tr>
+      <tr>
+        <td class="err">Works over SSH, fails from Jenkins</td>
+        <td>The agent is a LaunchDaemon with no user session, or its PATH is missing
+        <span class="path">/opt/homebrew/bin</span>. Fix the plist, then
+        <span class="path">launchctl unload</span> and <span class="path">load -w</span> it again.</td>
+      </tr>
+      <tr>
+        <td class="err">The build number has already been used</td>
+        <td>Every upload needs a new build number. Bump APP_BUILD_NUMBER. Nothing you can do to reuse one.</td>
+      </tr>
+      <tr>
+        <td class="err">The job never starts, no error</td>
+        <td>No online node carries the label <span class="path">macos</span>. Check Manage Jenkins → Nodes.</td>
+      </tr>
+      <tr>
+        <td class="err">Flutter version mismatch</td>
+        <td>The pipeline checks the SDK version exactly. Either change
+        <span class="path">FLUTTER_VERSION</span> or let FVM install the one that is written there.</td>
+      </tr>
+      <tr>
+        <td class="err">pod: command not found</td>
+        <td>CocoaPods is not installed on the Pipeline Mac, or brew is not in the agent's PATH.
+        <span class="path">brew install cocoapods</span>.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>If the app has extensions</h3>
+  <p>Widgets, push notification services and share extensions each need their own provisioning profile. Add a
+  second entry to the <span class="path">provisioningProfiles</span> map in the plist, and set the specifier per
+  target — the plain <span class="path">PROVISIONING_PROFILE_SPECIFIER</span> applies to every target and will
+  pick the wrong one.</p>
+
+  <h3>The one thing that comes back every year</h3>
+  <p>The distribution certificate expires after twelve months. When it does:</p>
+  <ul>
+    <li>Export a fresh <span class="path">dist.p12</span> on the Development Mac</li>
+    <li>Upload it over the old one in the bucket</li>
+    <li>Update <span class="path">ios-p12-password</span> in Jenkins if you chose a new password</li>
+  </ul>
+  <p>Nothing else changes. The API key does not expire, and the profile is downloaded fresh every build.</p>
+
+  <h3>Two things to never do</h3>
+  <ul>
+    <li><strong>Never</strong> log into Xcode on the Pipeline Mac. It creates its own certificates and quietly
+    competes with the pipeline's.</li>
+    <li><strong>Never</strong> create a new distribution certificate to fix a problem. You have two or three
+    total for the whole company. Find the old one first.</li>
+  </ul>
+</section>
+
+<footer>
+  Uses only tools that ship with macOS and Xcode — security, xcodebuild, xcrun, python3, openssl — plus FVM,
+  CocoaPods and the AWS CLI, which the pipeline installs with Homebrew.
+  No fastlane, no gems, no third-party signing tool.
+</footer>
+
+</div>
+
+<script>
+var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
+tabs.forEach(function (tab) {
+  tab.addEventListener('click', function () {
+    tabs.forEach(function (other) {
+      var panel = document.getElementById(other.getAttribute('aria-controls'));
+      var on = other === tab;
+      other.setAttribute('aria-selected', on ? 'true' : 'false');
+      panel.classList.toggle('on', on);
+    });
+    location.hash = tab.id;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
+if (location.hash) {
+  var wanted = document.getElementById(location.hash.slice(1));
+  if (wanted && wanted.getAttribute('role') === 'tab') { wanted.click(); }
+}
+
+document.querySelectorAll('figure').forEach(function (fig) {
+  var btn = fig.querySelector('button.copy');
+  var pre = fig.querySelector('pre');
+  if (!btn || !pre) { return; }
+  btn.addEventListener('click', function () {
+    navigator.clipboard.writeText(pre.textContent).then(function () {
+      btn.textContent = 'copied';
+      setTimeout(function () { btn.textContent = 'copy'; }, 1500);
+    }, function () {
+      btn.textContent = 'press cmd+c';
+    });
+  });
+});
+</script>
+</body>
+</html>
