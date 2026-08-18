@@ -143,39 +143,9 @@ pipeline {
 
         stage('Setup Flutter') {
             steps {
-                sh '''
-                    set -eu
-
-                    if ! command -v fvm >/dev/null 2>&1; then
-                        echo "fvm not found on this agent - installing"
-                        if ! command -v brew >/dev/null 2>&1; then
-                            echo "Homebrew is required to install fvm. Install it on this agent." >&2
-                            exit 1
-                        fi
-                        HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew install fvm
-                    fi
-                    echo "fvm $(fvm --version)"
-
-                    fvm install "$FLUTTER_VERSION" --setup
-                    fvm use "$FLUTTER_VERSION" --force
-
-                    ACTUAL=$(fvm flutter --version 2>/dev/null | awk '/^Flutter /{print $2; exit}')
-
-                    if [ -z "$ACTUAL" ]; then
-                        echo "Could not determine the active Flutter version" >&2
-                        exit 1
-                    fi
-
-                    echo "expected: $FLUTTER_VERSION"
-                    echo "actual:   $ACTUAL"
-
-                    if [ "$ACTUAL" != "$FLUTTER_VERSION" ]; then
-                        echo "Flutter version mismatch: expected $FLUTTER_VERSION but the active SDK is $ACTUAL" >&2
-                        exit 1
-                    fi
-
-                    echo "Flutter version matches"
-                '''
+                script {
+                    setupFlutter()
+                }
             }
         }
 
@@ -196,32 +166,7 @@ pipeline {
                         credentialsId: env.INFISICAL_TOKEN_CREDENTIALS_ID,
                         variable: 'INFISICAL_TOKEN'
                     )]) {
-                        sh '''
-                            set -eu
-
-                            if ! command -v infisical >/dev/null 2>&1; then
-                                echo "infisical not found on this agent - installing"
-                                if ! command -v brew >/dev/null 2>&1; then
-                                    echo "Homebrew is required to install the Infisical CLI." >&2
-                                    exit 1
-                                fi
-                                HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew install infisical
-                            fi
-                            echo "infisical $(infisical --version 2>&1 | head -1)"
-
-                            infisical export \
-                                --projectId="$INFISICAL_PROJECT_ID" \
-                                --env="$INFISICAL_ENV" \
-                                --domain="$INFISICAL_API_URL" \
-                                --format=dotenv > .env
-
-                            if [ ! -s .env ]; then
-                                echo "Infisical returned nothing - .env is empty" >&2
-                                exit 1
-                            fi
-
-                            echo ".env written to $(pwd) with $(grep -c "^[A-Za-z_]" .env) variable(s)"
-                        '''
+                        exportEnvFile()
                     }
 
                     Map<String, String> secretFiles = [:]
@@ -236,53 +181,16 @@ pipeline {
                         return
                     }
 
-                    sh '''
-                        set -eu
-
-                        if ! command -v aws >/dev/null 2>&1; then
-                            echo "aws not found on this agent - installing"
-                            if ! command -v brew >/dev/null 2>&1; then
-                                echo "Homebrew is required to install the aws CLI." >&2
-                                exit 1
-                            fi
-                            HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew install awscli
-                        fi
-                        echo "$(aws --version 2>&1 | head -1)"
-                    '''
-
-                    String endpoint = projectConfig.get('S3_ENDPOINT')
-                    String region = projectConfig.get('S3_REGION')
-
                     withCredentials([usernamePassword(
                         credentialsId: projectConfig.get('S3_CREDENTIALS_ID'),
                         usernameVariable: 'AWS_ACCESS_KEY_ID',
                         passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                     )]) {
-                        // R2 access key IDs are 32 characters. Pasting the API token
-                        // instead gives a longer one and a bare 400 from the service.
-                        sh 'echo "storage access key id: ${#AWS_ACCESS_KEY_ID} characters"'
-
-                        secretFiles.each { String destination, String source ->
-                            sh """
-                                set -eu
-
-                                mkdir -p "\$(dirname '${destination}')"
-                                # Checksum headers are sent by default since aws-cli 2.23 and are
-                                # rejected by some S3-compatible services. Ask for them only when
-                                # the operation requires them.
-                                AWS_DEFAULT_REGION='${region}' \\
-                                AWS_REQUEST_CHECKSUM_CALCULATION=when_required \\
-                                AWS_RESPONSE_CHECKSUM_VALIDATION=when_required \\
-                                    aws s3 cp '${source}' '${destination}' --endpoint-url '${endpoint}'
-
-                                if [ ! -s '${destination}' ]; then
-                                    echo "Downloaded file is empty: ${destination}" >&2
-                                    exit 1
-                                fi
-
-                                echo "${destination} <- ${source}"
-                            """
-                        }
+                        downloadSecretFiles(
+                            secretFiles,
+                            projectConfig.get('S3_ENDPOINT'),
+                            projectConfig.get('S3_REGION')
+                        )
                     }
 
                     echo "Downloaded ${secretFiles.size()} secret file(s)"
@@ -306,4 +214,92 @@ Map<String, String> parseProperties(String text) {
         result[entry.substring(0, separator).trim()] = entry.substring(separator + 1).trim()
     }
     return result
+}
+
+void ensureTool(String command, String formula) {
+    sh """
+        set -eu
+
+        if ! command -v ${command} >/dev/null 2>&1; then
+            echo "${command} not found on this agent - installing"
+            if ! command -v brew >/dev/null 2>&1; then
+                echo "Homebrew is required to install ${formula}. Install it on this agent." >&2
+                exit 1
+            fi
+            HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew install ${formula}
+        fi
+        echo "${command}: \$(${command} --version 2>&1 | head -1)"
+    """
+}
+
+void setupFlutter() {
+    ensureTool('fvm', 'fvm')
+    sh '''
+        set -eu
+
+        fvm install "$FLUTTER_VERSION" --setup
+        fvm use "$FLUTTER_VERSION" --force
+
+        ACTUAL=$(fvm flutter --version 2>/dev/null | awk '/^Flutter /{print $2; exit}')
+
+        if [ -z "$ACTUAL" ]; then
+            echo "Could not determine the active Flutter version" >&2
+            exit 1
+        fi
+
+        echo "expected: $FLUTTER_VERSION"
+        echo "actual:   $ACTUAL"
+
+        if [ "$ACTUAL" != "$FLUTTER_VERSION" ]; then
+            echo "Flutter version mismatch: expected $FLUTTER_VERSION but the active SDK is $ACTUAL" >&2
+            exit 1
+        fi
+
+        echo "Flutter version matches"
+    '''
+}
+
+void exportEnvFile() {
+    ensureTool('infisical', 'infisical')
+    sh '''
+        set -eu
+
+        infisical export \
+            --projectId="$INFISICAL_PROJECT_ID" \
+            --env="$INFISICAL_ENV" \
+            --domain="$INFISICAL_API_URL" \
+            --format=dotenv > .env
+
+        if [ ! -s .env ]; then
+            echo "Infisical returned nothing - .env is empty" >&2
+            exit 1
+        fi
+
+        echo ".env written to $(pwd) with $(grep -c "^[A-Za-z_]" .env) variable(s)"
+    '''
+}
+
+void downloadSecretFiles(Map<String, String> secretFiles, String endpoint, String region) {
+    ensureTool('aws', 'awscli')
+
+    sh 'echo "storage access key id: ${#AWS_ACCESS_KEY_ID} characters"'
+
+    secretFiles.each { String destination, String source ->
+        sh """
+            set -eu
+
+            mkdir -p "\$(dirname '${destination}')"
+            AWS_DEFAULT_REGION='${region}' \\
+            AWS_REQUEST_CHECKSUM_CALCULATION=when_required \\
+            AWS_RESPONSE_CHECKSUM_VALIDATION=when_required \\
+                aws s3 cp '${source}' '${destination}' --endpoint-url '${endpoint}'
+
+            if [ ! -s '${destination}' ]; then
+                echo "Downloaded file is empty: ${destination}" >&2
+                exit 1
+            fi
+
+            echo "${destination} <- ${source}"
+        """
+    }
 }
