@@ -113,12 +113,31 @@ pipeline {
 
                     fvm install "$FLUTTER_VERSION" --setup
                     fvm use "$FLUTTER_VERSION" --force
-                    fvm flutter --version
+                '''
+            }
+        }
 
-                    if ! fvm flutter --version 2>/dev/null | grep -q "$FLUTTER_VERSION"; then
-                        echo "Active Flutter SDK is not $FLUTTER_VERSION" >&2
+        stage('Verify Flutter Version') {
+            steps {
+                sh '''
+                    set -eu
+
+                    ACTUAL=$(fvm flutter --version 2>/dev/null | awk '/^Flutter /{print $2; exit}')
+
+                    if [ -z "$ACTUAL" ]; then
+                        echo "Could not determine the active Flutter version" >&2
                         exit 1
                     fi
+
+                    echo "expected: $FLUTTER_VERSION"
+                    echo "actual:   $ACTUAL"
+
+                    if [ "$ACTUAL" != "$FLUTTER_VERSION" ]; then
+                        echo "Flutter version mismatch: expected $FLUTTER_VERSION but the active SDK is $ACTUAL" >&2
+                        exit 1
+                    fi
+
+                    echo "Flutter version matches"
                 '''
             }
         }
