@@ -23,6 +23,9 @@ project different.
 | 9 | [`INFISICAL_ENV`](#-9-infisical_env) | ✅ Always | Which Infisical environment |
 | 10 | [`INFISICAL_TOKEN_CREDENTIALS_ID`](#-10-infisical_token_credentials_id) | ✅ Always | Where the Infisical token is kept |
 | 11 | [`SHOREBIRD_TOKEN_CREDENTIALS_ID`](#-11-shorebird_token_credentials_id) | ⚠️ Shorebird only | Where the Shorebird token is kept |
+| 12 | [`R2_ENDPOINT`](#-12-r2_endpoint) | ⚠️ With secret files | Which R2 account the files come from |
+| 13 | [`R2_CREDENTIALS_ID`](#-13-r2_credentials_id) | ⚠️ With secret files | Where the R2 keys are kept |
+| 14 | [`SECRET_FILE.*`](#-14-secret_file) | ⚠️ Per file | Which file goes where in the project |
 
 ---
 
@@ -282,6 +285,112 @@ above: the name lives here, the secret stays in Jenkins.
 > [!IMPORTANT]
 > A plain `Flutter` build never reads this. Projects that do not release through
 > Shorebird can leave the line out entirely.
+
+---
+
+## 🪣 12. `R2_ENDPOINT`
+
+| | |
+| :--- | :--- |
+| **Example** | `https://a1b2c3d4.r2.cloudflarestorage.com` |
+| **Format** | A URL, no trailing slash |
+| **Required** | ⚠️ Only when `SECRET_FILE.*` entries are set |
+
+**What it is** — the Cloudflare R2 address the secret files are downloaded from.
+
+```properties
+R2_ENDPOINT=https://a1b2c3d4.r2.cloudflarestorage.com
+```
+
+The subdomain is your Cloudflare **account ID**. Find it in the dashboard under
+R2 → Manage API tokens, next to the S3 endpoint.
+
+**Why it exists** — R2 speaks the S3 API, so the same `aws s3 cp` works against it.
+The only difference is where the request goes, and that is this one line. Point it
+at a different account, or at real AWS S3, without touching the `Jenkinsfile`.
+
+> [!NOTE]
+> The region is always `auto` for R2. The pipeline sets it, so it is not a setting
+> here.
+
+---
+
+## 🗝️ 13. `R2_CREDENTIALS_ID`
+
+| | |
+| :--- | :--- |
+| **Example** | `r2-credentials` |
+| **Format** | A Jenkins credential ID |
+| **Required** | ⚠️ Only when `SECRET_FILE.*` entries are set |
+
+**What it is** — the **name** of a Jenkins credential. Never the keys themselves.
+
+```properties
+R2_CREDENTIALS_ID=r2-credentials
+```
+
+The credential is created in Jenkins:
+
+| Field | Value |
+| :---- | :---- |
+| Kind | Username with password |
+| Username | R2 Access Key ID |
+| Password | R2 Secret Access Key |
+| ID | `r2-credentials` |
+
+Both keys come from the Cloudflare dashboard, R2 → Manage API tokens. **Object
+Read** on the one bucket is enough — the pipeline only downloads.
+
+**Why it exists** — same reasoning as every other credential ID here. The keys stay
+in Jenkins, and the pipeline hands them to the aws CLI through the environment, so
+they never reach a command line or the build log.
+
+> [!WARNING]
+> Putting a raw access key here instead of a credential ID is rejected by the
+> pipeline, the same as for the other credential IDs.
+
+---
+
+## 📦 14. `SECRET_FILE.*`
+
+| | |
+| :--- | :--- |
+| **Example** | `SECRET_FILE.android/key.properties=s3://assets/ccmt/prod/key.properties` |
+| **Format** | `SECRET_FILE.<path in the project>=<r2 uri>` |
+| **Required** | ⚠️ One line per file, none is fine |
+
+**What it is** — a map. The key is where the file lands in the checked out project,
+the value is where it comes from in R2.
+
+```properties
+SECRET_FILE.android/app/google-services.json=s3://assets/ccmt/prod/google-services.json
+SECRET_FILE.android/key.properties=s3://assets/ccmt/prod/key.properties
+SECRET_FILE.android/app/upload-keystore.jks=s3://assets/ccmt/prod/upload-keystore.jks
+SECRET_FILE.ios/Runner/GoogleService-Info.plist=s3://assets/ccmt/prod/GoogleService-Info.plist
+```
+
+Read one line as a sentence:
+
+```text
+SECRET_FILE.  android/key.properties  =  s3://assets/ccmt/prod/key.properties
+└─ prefix ─┘  └─ where it goes ────┘     └─ where it comes from ──────────┘
+```
+
+Destination paths are relative to the project root, and missing directories are
+created. The prefix is stripped, so whatever follows it *is* the path.
+
+**Why it exists** — a keystore, a `google-services.json` and an iOS plist cannot be
+committed, but the build needs them in exact places. Listing them as pairs keeps
+both halves in one line, so the bucket can be organised however you like and the
+project layout still decides where files land.
+
+> [!TIP]
+> Adding a file is one line here. No `Jenkinsfile` change — the stage downloads
+> whatever it finds.
+
+> [!NOTE]
+> A project with no `SECRET_FILE.*` lines skips the stage, and then `R2_ENDPOINT`
+> and `R2_CREDENTIALS_ID` are not required either.
 
 ---
 

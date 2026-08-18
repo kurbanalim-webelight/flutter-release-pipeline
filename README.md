@@ -12,6 +12,7 @@
 | 2 | [Setup Flutter](#-2-setup-flutter) |
 | 3 | [Clone Repository](#-3-clone-repository) |
 | 4 | [Load Secret Files](#-4-load-secret-files) |
+| 5 | [Download Secret Files](#-5-download-secret-files) |
 
 ---
 
@@ -118,7 +119,46 @@ it never appears in a command line.
 > [!NOTE]
 > Only the number of variables is logged, never their names or values.
 
-> [!IMPORTANT]
-> Only `.env` is loaded so far. `google-services.json`, the iOS plist, the keystore
-> and `key.properties` come next, each written to a path taken from
-> [`pipeline.properties`](pipeline.properties).
+---
+
+## 📦 5. Download Secret Files
+
+Pulls the files that cannot be committed — the keystore, `google-services.json`,
+`key.properties`, the iOS plist — out of Cloudflare R2 and into the checkout.
+
+Each one is a line in [`pipeline.properties`](pipeline.properties):
+
+```properties
+SECRET_FILE.android/key.properties=s3://assets/ccmt/prod/key.properties
+└─ prefix ─┘└─ where it goes ───┘   └─ where it comes from ───────────┘
+```
+
+| # | Action |
+| :-: | :----- |
+| 1 | If the aws CLI is absent, install it with Homebrew |
+| 2 | Collect every `SECRET_FILE.*` entry into destination → source pairs |
+| 3 | Create the destination directory, then `aws s3 cp` the file into it |
+| 4 | Fail if a downloaded file is empty |
+
+```text
+android/app/google-services.json <- s3://assets/ccmt/prod/google-services.json
+android/key.properties <- s3://assets/ccmt/prod/key.properties
+android/app/upload-keystore.jks <- s3://assets/ccmt/prod/upload-keystore.jks
+ios/Runner/GoogleService-Info.plist <- s3://assets/ccmt/prod/GoogleService-Info.plist
+Downloaded 4 secret file(s)
+```
+
+### R2 is reached with the S3 API
+
+R2 is S3-compatible, so this is a plain `aws s3 cp` pointed at `R2_ENDPOINT` with
+the region fixed to `auto`. The keys come from the Jenkins credential named by
+`R2_CREDENTIALS_ID` and are passed through the environment, never on a command
+line.
+
+> [!NOTE]
+> The stage runs after the clone, so destinations land inside the project. Running
+> it earlier would only get the files wiped by `git`.
+
+> [!TIP]
+> Adding a file is one line in [`pipeline.properties`](pipeline.properties). A
+> project with no `SECRET_FILE.*` lines skips the stage entirely.

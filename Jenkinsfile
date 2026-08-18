@@ -97,13 +97,23 @@ pipeline {
                         error "GIT_REPO_PATH must have no leading slash and no .git suffix, got '${repoPath}'."
                     }
 
-                    ['GIT_CREDENTIALS_ID', 'INFISICAL_TOKEN_CREDENTIALS_ID'].each { String key ->
+                    ['GIT_CREDENTIALS_ID', 'INFISICAL_TOKEN_CREDENTIALS_ID', 'R2_CREDENTIALS_ID'].each { String key ->
                         if (projectConfig.get(key) ==~ /^(glpat-|gh[pousr]_|xox[baprs]-|st\.).*/) {
                             error "${key} looks like a secret, not a credential ID. " +
                                   'Store the secret in Jenkins Credentials and put its ID here.'
                         }
                     }
                     String credentialsId = projectConfig.get('GIT_CREDENTIALS_ID')
+
+                    if (projectConfig.any { String key, String value -> key.startsWith('SECRET_FILE.') }) {
+                        List<String> missingR2 = ['R2_ENDPOINT', 'R2_CREDENTIALS_ID'].findAll { String key ->
+                            !projectConfig.get(key)
+                        }
+                        if (missingR2) {
+                            error "Required in ${env.CONFIG_FILE} when SECRET_FILE.* entries are set:\n  - " +
+                                  missingR2.join('\n  - ')
+                        }
+                    }
 
                     env.FLUTTER_VERSION    = flutterVersion
                     env.GIT_BRANCH         = projectConfig.get('GIT_BRANCH')
@@ -210,6 +220,65 @@ pipeline {
 
                         echo ".env written to $(pwd) with $(grep -c "^[A-Za-z_]" .env) variable(s)"
                     '''
+                }
+            }
+        }
+
+        stage('Download Secret Files') {
+            steps {
+                script {
+                    Map<String, String> secretFiles = [:]
+                    projectConfig.each { String key, String value ->
+                        if (key.startsWith('SECRET_FILE.')) {
+                            secretFiles[key.substring('SECRET_FILE.'.length())] = value
+                        }
+                    }
+
+                    if (!secretFiles) {
+                        echo 'No SECRET_FILE.* entries configured - nothing to download.'
+                        return
+                    }
+
+                    sh '''
+                        set -eu
+
+                        if ! command -v aws >/dev/null 2>&1; then
+                            echo "aws not found on this agent - installing"
+                            if ! command -v brew >/dev/null 2>&1; then
+                                echo "Homebrew is required to install the aws CLI." >&2
+                                exit 1
+                            fi
+                            HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew install awscli
+                        fi
+                        echo "$(aws --version 2>&1 | head -1)"
+                    '''
+
+                    String endpoint = projectConfig.get('R2_ENDPOINT')
+
+                    withCredentials([usernamePassword(
+                        credentialsId: projectConfig.get('R2_CREDENTIALS_ID'),
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )]) {
+                        secretFiles.each { String destination, String source ->
+                            sh """
+                                set -eu
+
+                                mkdir -p "\$(dirname '${destination}')"
+                                AWS_DEFAULT_REGION=auto \\
+                                    aws s3 cp '${source}' '${destination}' --endpoint-url '${endpoint}'
+
+                                if [ ! -s '${destination}' ]; then
+                                    echo "Downloaded file is empty: ${destination}" >&2
+                                    exit 1
+                                fi
+
+                                echo "${destination} <- ${source}"
+                            """
+                        }
+                    }
+
+                    echo "Downloaded ${secretFiles.size()} secret file(s)"
                 }
             }
         }
