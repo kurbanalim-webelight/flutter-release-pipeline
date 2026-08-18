@@ -258,12 +258,21 @@ pipeline {
                         usernameVariable: 'AWS_ACCESS_KEY_ID',
                         passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                     )]) {
+                        // R2 access key IDs are 32 characters. Pasting the API token
+                        // instead gives a longer one and a bare 400 from the service.
+                        sh 'echo "storage access key id: ${#AWS_ACCESS_KEY_ID} characters"'
+
                         secretFiles.each { String destination, String source ->
                             sh """
                                 set -eu
 
                                 mkdir -p "\$(dirname '${destination}')"
+                                # Checksum headers are sent by default since aws-cli 2.23 and are
+                                # rejected by some S3-compatible services. Ask for them only when
+                                # the operation requires them.
                                 AWS_DEFAULT_REGION='${region}' \\
+                                AWS_REQUEST_CHECKSUM_CALCULATION=when_required \\
+                                AWS_RESPONSE_CHECKSUM_VALIDATION=when_required \\
                                     aws s3 cp '${source}' '${destination}' --endpoint-url '${endpoint}'
 
                                 if [ ! -s '${destination}' ]; then
