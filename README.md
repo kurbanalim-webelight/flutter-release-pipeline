@@ -11,6 +11,7 @@
 | 1 | [Validate & Load Configuration](#-1-validate--load-configuration) |
 | 2 | [Setup Flutter](#-2-setup-flutter) |
 | 3 | [Clone Repository](#-3-clone-repository) |
+| 4 | [Load Secret Files](#-4-load-secret-files) |
 
 ---
 
@@ -33,7 +34,7 @@ Names the run so the build history is readable:
 | Action | Detail |
 | :----- | :----- |
 | Parse | `KEY=VALUE` per line; `#` and `!` start a comment |
-| Require | `FLUTTER_VERSION`, `GIT_PROTOCOL`, `GIT_HOST`, `GIT_REPO_PATH`, `GIT_BRANCH`, `GIT_CREDENTIALS_ID` |
+| Require | The `FLUTTER_*`, `GIT_*` and `INFISICAL_*` keys |
 | Build | The clone URL from `GIT_PROTOCOL`, `GIT_HOST` and `GIT_REPO_PATH` |
 | Reject | A `GIT_CREDENTIALS_ID` that looks like a raw token instead of an ID |
 | Export | Each value becomes an environment variable for later steps |
@@ -92,3 +93,32 @@ https  https://gitlab.webelight.co.in/webelight/ccmt/chinmaya-mission-flutter.gi
 > `ssh` needs port 22 open to the GitLab host. That holds inside the office network
 > but is usually blocked outside it, where the clone times out after about 75
 > seconds. Use `https` when working from outside.
+
+---
+
+## 🔐 4. Load Secret Files
+
+Fetches secrets that are not in the repository and writes them into the project.
+
+| # | Action |
+| :-: | :----- |
+| 1 | If the Infisical CLI is absent, install it with Homebrew |
+| 2 | Export the `INFISICAL_ENV` environment of project `INFISICAL_PROJECT_ID` |
+| 3 | Write the result to `.env` in the project root |
+| 4 | Fail if `.env` came back empty |
+
+The token is read from the Jenkins credential named by
+`INFISICAL_TOKEN_CREDENTIALS_ID` and passed to the CLI through the environment, so
+it never appears in a command line.
+
+```text
+.env written to /Users/…/workspace/flutter-release-pipeline with 24 variable(s)
+```
+
+> [!NOTE]
+> Only the number of variables is logged, never their names or values.
+
+> [!IMPORTANT]
+> Only `.env` is loaded so far. `google-services.json`, the iOS plist, the keystore
+> and `key.properties` come next, each written to a path taken from
+> [`pipeline.properties`](pipeline.properties).

@@ -76,7 +76,9 @@ pipeline {
                     }
 
                     List<String> missing = []
-                    ['FLUTTER_VERSION', 'GIT_PROTOCOL', 'GIT_HOST', 'GIT_REPO_PATH', 'GIT_BRANCH', 'GIT_CREDENTIALS_ID'].each { String key ->
+                    ['FLUTTER_VERSION', 'GIT_PROTOCOL', 'GIT_HOST', 'GIT_REPO_PATH', 'GIT_BRANCH',
+                     'GIT_CREDENTIALS_ID', 'INFISICAL_API_URL', 'INFISICAL_PROJECT_ID',
+                     'INFISICAL_ENV', 'INFISICAL_TOKEN_CREDENTIALS_ID'].each { String key ->
                         if (!projectConfig.get(key)) {
                             missing << key
                         }
@@ -95,11 +97,13 @@ pipeline {
                         error "GIT_REPO_PATH must have no leading slash and no .git suffix, got '${repoPath}'."
                     }
 
-                    String credentialsId = projectConfig.get('GIT_CREDENTIALS_ID')
-                    if (credentialsId ==~ /^(glpat-|gh[pousr]_|xox[baprs]-).*/) {
-                        error 'GIT_CREDENTIALS_ID looks like an access token, not a credential ID. ' +
-                              'Store the secret in Jenkins Credentials and put its ID here.'
+                    ['GIT_CREDENTIALS_ID', 'INFISICAL_TOKEN_CREDENTIALS_ID'].each { String key ->
+                        if (projectConfig.get(key) ==~ /^(glpat-|gh[pousr]_|xox[baprs]-|st\.).*/) {
+                            error "${key} looks like a secret, not a credential ID. " +
+                                  'Store the secret in Jenkins Credentials and put its ID here.'
+                        }
                     }
+                    String credentialsId = projectConfig.get('GIT_CREDENTIALS_ID')
 
                     env.FLUTTER_VERSION    = flutterVersion
                     env.GIT_BRANCH         = projectConfig.get('GIT_BRANCH')
@@ -113,6 +117,11 @@ pipeline {
                     } else {
                         error "GIT_PROTOCOL must be ssh or https, got '${protocol}'."
                     }
+
+                    env.INFISICAL_API_URL              = projectConfig.get('INFISICAL_API_URL')
+                    env.INFISICAL_PROJECT_ID           = projectConfig.get('INFISICAL_PROJECT_ID')
+                    env.INFISICAL_ENV                  = projectConfig.get('INFISICAL_ENV')
+                    env.INFISICAL_TOKEN_CREDENTIALS_ID = projectConfig.get('INFISICAL_TOKEN_CREDENTIALS_ID')
 
                     echo "Repository: ${env.GIT_URL}"
 
@@ -166,6 +175,42 @@ pipeline {
                     url: env.GIT_URL
 
                 sh 'git --no-pager log -1 --format="%h %s"'
+            }
+        }
+
+        stage('Load Secret Files') {
+            steps {
+                withCredentials([string(
+                    credentialsId: env.INFISICAL_TOKEN_CREDENTIALS_ID,
+                    variable: 'INFISICAL_TOKEN'
+                )]) {
+                    sh '''
+                        set -eu
+
+                        if ! command -v infisical >/dev/null 2>&1; then
+                            echo "infisical not found on this agent - installing"
+                            if ! command -v brew >/dev/null 2>&1; then
+                                echo "Homebrew is required to install the Infisical CLI." >&2
+                                exit 1
+                            fi
+                            HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew install infisical
+                        fi
+                        echo "infisical $(infisical --version 2>&1 | head -1)"
+
+                        infisical export \
+                            --projectId="$INFISICAL_PROJECT_ID" \
+                            --env="$INFISICAL_ENV" \
+                            --domain="$INFISICAL_API_URL" \
+                            --format=dotenv > .env
+
+                        if [ ! -s .env ]; then
+                            echo "Infisical returned nothing - .env is empty" >&2
+                            exit 1
+                        fi
+
+                        echo ".env written to $(pwd) with $(grep -c "^[A-Za-z_]" .env) variable(s)"
+                    '''
+                }
             }
         }
     }

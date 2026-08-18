@@ -18,7 +18,11 @@ project different.
 | 4 | [`GIT_REPO_PATH`](#-4-git_repo_path) | ✅ Always | Which project on that server |
 | 5 | [`GIT_BRANCH`](#-5-git_branch) | ✅ Always | Which branch to clone |
 | 6 | [`GIT_CREDENTIALS_ID`](#-6-git_credentials_id) | ✅ Always | Where the git credential is kept |
-| 7 | [`SHOREBIRD_TOKEN_CREDENTIALS_ID`](#-7-shorebird_token_credentials_id) | ⚠️ Shorebird only | Where the Shorebird token is kept |
+| 7 | [`INFISICAL_API_URL`](#-7-infisical_api_url) | ✅ Always | Which Infisical server |
+| 8 | [`INFISICAL_PROJECT_ID`](#-8-infisical_project_id) | ✅ Always | Which Infisical project |
+| 9 | [`INFISICAL_ENV`](#-9-infisical_env) | ✅ Always | Which Infisical environment |
+| 10 | [`INFISICAL_TOKEN_CREDENTIALS_ID`](#-10-infisical_token_credentials_id) | ✅ Always | Where the Infisical token is kept |
+| 11 | [`SHOREBIRD_TOKEN_CREDENTIALS_ID`](#-11-shorebird_token_credentials_id) | ⚠️ Shorebird only | Where the Shorebird token is kept |
 
 ---
 
@@ -173,7 +177,92 @@ it.
 
 ---
 
-## 🐦 7. `SHOREBIRD_TOKEN_CREDENTIALS_ID`
+## ☁️ 7. `INFISICAL_API_URL`
+
+| | |
+| :--- | :--- |
+| **Example** | `https://app.infisical.com` |
+| **Format** | A URL, no trailing slash |
+| **Required** | ✅ Always |
+
+**What it is** — the Infisical server the secrets are read from.
+
+```properties
+INFISICAL_API_URL=https://app.infisical.com
+```
+
+**Why it exists** — teams running a self-hosted Infisical need a different address.
+Keeping it here means the pipeline works against either without a code change.
+
+---
+
+## 🆔 8. `INFISICAL_PROJECT_ID`
+
+| | |
+| :--- | :--- |
+| **Example** | `7f3a1c2e-...` |
+| **Format** | The project ID from the Infisical dashboard |
+| **Required** | ✅ Always |
+
+**What it is** — which Infisical project holds this app's secrets.
+
+```properties
+INFISICAL_PROJECT_ID=7f3a1c2e-4b5d-6789-abcd-ef0123456789
+```
+
+**Why it exists** — one Infisical account holds many projects. This is the per-app
+part, so it changes for every project using this pipeline.
+
+---
+
+## 🏷️ 9. `INFISICAL_ENV`
+
+| | |
+| :--- | :--- |
+| **Example** | `dev` |
+| **Format** | An environment slug from the Infisical project |
+| **Required** | ✅ Always |
+
+**What it is** — which set of values to export, e.g. `dev`, `staging`, `prod`.
+
+```properties
+INFISICAL_ENV=dev
+```
+
+**Why it exists** — the same variable names hold different values per environment.
+This decides which set lands in `.env`.
+
+---
+
+## 🎫 10. `INFISICAL_TOKEN_CREDENTIALS_ID`
+
+| | |
+| :--- | :--- |
+| **Example** | `infisical-token` |
+| **Format** | A Jenkins credential ID |
+| **Required** | ✅ Always |
+
+**What it is** — the **name** of a Jenkins credential. Never the token.
+
+```properties
+INFISICAL_TOKEN_CREDENTIALS_ID=infisical-token
+```
+
+The credential is created in Jenkins:
+
+| Field | Value |
+| :---- | :---- |
+| Kind | Secret text |
+| Secret | The Infisical service token |
+| ID | `infisical-token` |
+
+**Why it exists** — reading secrets requires a secret of its own. Storing only the
+name keeps the token inside Jenkins, and the pipeline hands it to the CLI through
+the environment rather than a command line, so it never reaches the build log.
+
+---
+
+## 🐦 11. `SHOREBIRD_TOKEN_CREDENTIALS_ID`
 
 | | |
 | :--- | :--- |
