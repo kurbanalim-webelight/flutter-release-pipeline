@@ -13,7 +13,10 @@ project different.
 | # | Variable | Required | In one line |
 | :-: | :------- | :------: | :---------- |
 | 1 | [`FLUTTER_VERSION`](#-1-flutter_version) | ✅ Always | Which Flutter SDK builds the app |
-| 2 | [`SHOREBIRD_TOKEN_CREDENTIALS_ID`](#-2-shorebird_token_credentials_id) | ⚠️ Shorebird only | Where the Shorebird token is kept |
+| 2 | [`GIT_REPO_URL`](#-2-git_repo_url) | ✅ Always | Which GitLab repository to build |
+| 3 | [`GIT_BRANCH`](#-3-git_branch) | ✅ Always | Which branch to clone |
+| 4 | [`GIT_CREDENTIALS_ID`](#-4-git_credentials_id) | ✅ Always | Where the GitLab token is kept |
+| 5 | [`SHOREBIRD_TOKEN_CREDENTIALS_ID`](#-5-shorebird_token_credentials_id) | ⚠️ Shorebird only | Where the Shorebird token is kept |
 
 ---
 
@@ -41,7 +44,75 @@ produces the same build on any machine, today or in six months.
 
 ---
 
-## 🐦 2. `SHOREBIRD_TOKEN_CREDENTIALS_ID`
+## 🌐 2. `GIT_REPO_URL`
+
+| | |
+| :--- | :--- |
+| **Example** | `https://gitlab.com/your-group/your-project.git` |
+| **Format** | Must start with `https://` or `git@` |
+| **Required** | ✅ Always |
+
+**What it is** — the GitLab repository the pipeline clones and builds.
+
+```properties
+GIT_REPO_URL=https://gitlab.com/your-group/your-project.git
+```
+
+**Why it exists** — this is what makes one pipeline serve many projects. Point it
+at a different repository and the same `Jenkinsfile` builds a different app.
+
+---
+
+## 🌿 3. `GIT_BRANCH`
+
+| | |
+| :--- | :--- |
+| **Example** | `main` |
+| **Format** | A branch name |
+| **Required** | ✅ Always |
+
+**What it is** — the branch to clone.
+
+```properties
+GIT_BRANCH=main
+```
+
+**Why it exists** — a clone needs a named ref to be repeatable. Stating the branch
+means two runs of the same configuration fetch the same thing, instead of
+depending on whatever the remote's default happens to be.
+
+---
+
+## 🔑 4. `GIT_CREDENTIALS_ID`
+
+| | |
+| :--- | :--- |
+| **Example** | `gitlab-token` |
+| **Format** | A Jenkins credential ID |
+| **Required** | ✅ Always |
+
+**What it is** — the **name** of a Jenkins credential. Not the token.
+
+```properties
+GIT_CREDENTIALS_ID=gitlab-token
+```
+
+The credential itself is created in Jenkins:
+
+| Field | Value |
+| :---- | :---- |
+| Kind | Username with password |
+| Username | `oauth2` |
+| Password | The GitLab access token |
+| ID | `gitlab-token` |
+
+**Why it exists** — cloning a private repository needs a token. The token is a
+secret; this file is not. Storing only the name keeps the secret inside Jenkins,
+where the pipeline can read it but git and the build log never see it.
+
+---
+
+## 🐦 5. `SHOREBIRD_TOKEN_CREDENTIALS_ID`
 
 | | |
 | :--- | :--- |
@@ -55,9 +126,8 @@ produces the same build on any machine, today or in six months.
 SHOREBIRD_TOKEN_CREDENTIALS_ID=shorebird-token
 ```
 
-**Why it exists** — Shorebird needs a token to publish a release. The token is a
-secret; this file is not. Storing only the name keeps the secret inside Jenkins,
-where the pipeline can read it but git and the build log never see it.
+**Why it exists** — Shorebird needs a token to publish a release. Same reasoning as
+above: the name lives here, the secret stays in Jenkins.
 
 > [!IMPORTANT]
 > A plain `Flutter` build never reads this. Projects that do not release through

@@ -39,7 +39,7 @@ pipeline {
 
     stages {
 
-        stage('Validate Inputs') {
+        stage('Validate & Load Configuration') {
             steps {
                 script {
                     List<String> errors = []
@@ -65,13 +65,7 @@ pipeline {
                     currentBuild.displayName =
                         "#${env.BUILD_NUMBER} ${params.PLATFORM}/${params.BUILD_RUNNER} " +
                         "${params.BUILD_VERSION}+${params.APP_BUILD_NUMBER}"
-                }
-            }
-        }
 
-        stage('Load Configuration') {
-            steps {
-                script {
                     if (!fileExists(env.CONFIG_FILE)) {
                         error "Configuration file not found: ${env.CONFIG_FILE}"
                     }
@@ -81,15 +75,36 @@ pipeline {
                         error "No settings found in ${env.CONFIG_FILE}."
                     }
 
-                    String flutterVersion = projectConfig.get('FLUTTER_VERSION')
-                    if (!flutterVersion) {
-                        error "FLUTTER_VERSION is not set in ${env.CONFIG_FILE}."
+                    List<String> missing = []
+                    ['FLUTTER_VERSION', 'GIT_REPO_URL', 'GIT_BRANCH', 'GIT_CREDENTIALS_ID'].each { String key ->
+                        if (!projectConfig.get(key)) {
+                            missing << key
+                        }
                     }
+                    if (missing) {
+                        error "Missing in ${env.CONFIG_FILE}:\n  - ${missing.join('\n  - ')}"
+                    }
+
+                    String flutterVersion = projectConfig.get('FLUTTER_VERSION')
                     if (!(flutterVersion ==~ /^\d+\.\d+\.\d+(-\S+)?$/)) {
                         error "FLUTTER_VERSION must look like 3.35.4, got '${flutterVersion}'."
                     }
 
-                    env.FLUTTER_VERSION = flutterVersion
+                    String repoUrl = projectConfig.get('GIT_REPO_URL')
+                    if (!(repoUrl ==~ /^(https:\/\/|git@).+/)) {
+                        error "GIT_REPO_URL must start with https:// or git@, got '${repoUrl}'."
+                    }
+
+                    String credentialsId = projectConfig.get('GIT_CREDENTIALS_ID')
+                    if (credentialsId ==~ /^(glpat-|gh[pousr]_|xox[baprs]-).*/) {
+                        error 'GIT_CREDENTIALS_ID looks like an access token, not a credential ID. ' +
+                              'Store the token in Jenkins Credentials and put its ID here.'
+                    }
+
+                    env.FLUTTER_VERSION    = flutterVersion
+                    env.GIT_REPO_URL       = repoUrl
+                    env.GIT_BRANCH         = projectConfig.get('GIT_BRANCH')
+                    env.GIT_CREDENTIALS_ID = credentialsId
 
                     echo "Loaded ${projectConfig.size()} setting(s) from ${env.CONFIG_FILE}"
                 }
@@ -113,14 +128,6 @@ pipeline {
 
                     fvm install "$FLUTTER_VERSION" --setup
                     fvm use "$FLUTTER_VERSION" --force
-                '''
-            }
-        }
-
-        stage('Verify Flutter Version') {
-            steps {
-                sh '''
-                    set -eu
 
                     ACTUAL=$(fvm flutter --version 2>/dev/null | awk '/^Flutter /{print $2; exit}')
 
@@ -139,6 +146,20 @@ pipeline {
 
                     echo "Flutter version matches"
                 '''
+            }
+        }
+
+        stage('Clone Repository') {
+            steps {
+                checkout scmGit(
+                    branches: [[name: "*/${env.GIT_BRANCH}"]],
+                    userRemoteConfigs: [[
+                        url: env.GIT_REPO_URL,
+                        credentialsId: env.GIT_CREDENTIALS_ID
+                    ]],
+                    extensions: [[$class: 'CloneOption', shallow: true, depth: 1, noTags: true]]
+                )
+                sh 'git --no-pager log -1 --format="%h %s"'
             }
         }
     }
