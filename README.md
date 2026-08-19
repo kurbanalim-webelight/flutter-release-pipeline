@@ -9,10 +9,11 @@
 | # | Step |
 | :-: | :--- |
 | 1 | [Validate & Load Configuration](#-1-validate--load-configuration) |
-| 2 | [Setup Flutter](#-2-setup-flutter) |
-| 3 | [Clone Repository](#-3-clone-repository) |
+| 2 | [Clone Repository](#-2-clone-repository) |
+| 3 | [Setup Flutter](#-3-setup-flutter) |
 | 4 | [Load Secret Files](#-4-load-secret-files) |
 | 5 | [Download Secret Files](#-5-download-secret-files) |
+| 6 | [Install Dependencies](#-6-install-dependencies) |
 
 ---
 
@@ -42,26 +43,7 @@ Names the run so the build history is readable:
 
 ---
 
-## 🐦 2. Setup Flutter
-
-Prepares the toolchain, installs the SDK, and confirms the right one is active.
-
-| # | Action |
-| :-: | :----- |
-| 1 | If `fvm` is absent, install it with Homebrew |
-| 2 | `fvm install "$FLUTTER_VERSION" --setup` — downloads the SDK if not cached |
-| 3 | `fvm use "$FLUTTER_VERSION" --force` — pins the workspace to that SDK |
-| 4 | Compare the active version against `FLUTTER_VERSION` as an exact string |
-
-```text
-expected: 3.44.6
-actual:   3.44.6
-Flutter version matches
-```
-
----
-
-## 📥 3. Clone Repository
+## 📥 2. Clone Repository
 
 Clones the GitLab project into the workspace.
 
@@ -94,6 +76,32 @@ https  https://gitlab.webelight.co.in/webelight/ccmt/chinmaya-mission-flutter.gi
 > `ssh` needs port 22 open to the GitLab host. That holds inside the office network
 > but is usually blocked outside it, where the clone times out after about 75
 > seconds. Use `https` when working from outside.
+
+---
+
+## 🐦 3. Setup Flutter
+
+Prepares the toolchain, installs the SDK, and confirms the right one is active.
+
+| # | Action |
+| :-: | :----- |
+| 1 | If `fvm` is absent, install it with Homebrew |
+| 2 | `fvm install "$FLUTTER_VERSION" --setup` — downloads the SDK if not cached |
+| 3 | `fvm use "$FLUTTER_VERSION" --force` — pins the workspace to that SDK |
+| 4 | Compare the active version against `FLUTTER_VERSION` as an exact string |
+
+> [!IMPORTANT]
+> This step runs **after** the clone, not before it. `fvm use` pins a version by
+> writing `.fvmrc` into the project it is standing in, so pinning an empty
+> workspace has no effect on the build and the version check passes against
+> nothing. Cloning first means the pin lands in the app, and every later
+> `fvm flutter` call gets the SDK named in `FLUTTER_VERSION`.
+
+```text
+expected: 3.44.6
+actual:   3.44.6
+Flutter version matches
+```
 
 ---
 
@@ -162,3 +170,33 @@ line.
 > [!TIP]
 > Adding a file is one line in [`pipeline.properties`](pipeline.properties). A
 > project with no `SECRET_FILE.*` lines skips the stage entirely.
+
+---
+
+## 🧩 6. Install Dependencies
+
+Resolves the packages the build needs, before anything tries to compile.
+
+| # | Action |
+| :-: | :----- |
+| 1 | `fvm flutter clean` — drop any output left by an earlier build |
+| 2 | `fvm flutter pub get` — resolve the Dart packages with the pinned SDK |
+| 3 | iOS only: if the CocoaPods CLI is absent, install it with Homebrew |
+| 4 | iOS only: `cd ios && pod install --repo-update` |
+
+```text
+Got dependencies!
+pod: 1.16.2
+Pod installation complete!
+```
+
+> [!NOTE]
+> Always `fvm flutter`, never plain `flutter`. Plain `flutter` uses whatever SDK is
+> on the machine's `PATH`, which is how a build silently stops matching
+> `FLUTTER_VERSION`.
+
+> [!TIP]
+> The pods step is skipped for an Android build. `flutter build ios` runs
+> `pod install` on its own too, so this step mostly buys an earlier and clearer
+> failure. `--repo-update` refreshes the CocoaPods spec repo on every run — drop it
+> if the extra minute costs more than it saves.

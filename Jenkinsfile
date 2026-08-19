@@ -146,16 +146,6 @@ pipeline {
             }
         }
 
-        stage('Setup Flutter') {
-            steps {
-                script {
-                    section('🐦  Setup Flutter')
-
-                    setupFlutter()
-                }
-            }
-        }
-
         stage('Clone Repository') {
             steps {
                 script {
@@ -170,6 +160,16 @@ pipeline {
                         returnStdout: true
                     ).trim()
                     echo "🔖  HEAD: ${head}"
+                }
+            }
+        }
+
+        stage('Setup Flutter') {
+            steps {
+                script {
+                    section('🐦  Setup Flutter')
+
+                    setupFlutter()
                 }
             }
         }
@@ -211,6 +211,16 @@ pipeline {
                     }
 
                     echo "✅  Downloaded ${secretFiles.size()} secret file(s)"
+                }
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                script {
+                    section('📦  Install Dependencies')
+
+                    installDependencies(params.PLATFORM == 'iOS')
                 }
             }
         }
@@ -291,6 +301,28 @@ void setupFlutter() {
         fi
 
         echo "✅  Flutter version matches"
+    '''
+}
+
+void installDependencies(boolean withPods) {
+    sh '''
+        set -eu
+
+        fvm flutter clean
+        fvm flutter pub get
+    '''
+
+    if (!withPods) {
+        echo '💭  Android build - skipping pod install.'
+        return
+    }
+
+    ensureTool('pod', 'cocoapods')
+    sh '''
+        set -eu
+
+        cd ios
+        pod install --repo-update
     '''
 }
 
