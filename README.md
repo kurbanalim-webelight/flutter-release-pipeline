@@ -182,7 +182,8 @@ Resolves the packages the build needs, before anything tries to compile.
 | 1 | `fvm flutter clean` — drop any output left by an earlier build |
 | 2 | `fvm flutter pub get` — resolve the Dart packages with the pinned SDK |
 | 3 | iOS only: if the CocoaPods CLI is absent, install it with Homebrew |
-| 4 | iOS only: `cd ios && pod install --repo-update` |
+| 4 | iOS only: `fvm flutter precache --ios` — download the iOS engine artifacts |
+| 5 | iOS only: `cd ios && pod install --repo-update` |
 
 ```text
 Got dependencies!
@@ -194,6 +195,12 @@ Pod installation complete!
 > Always `fvm flutter`, never plain `flutter`. Plain `flutter` uses whatever SDK is
 > on the machine's `PATH`, which is how a build silently stops matching
 > `FLUTTER_VERSION`.
+
+> [!TIP]
+> `precache` is not optional on a freshly installed SDK. The Podfile's post-install
+> hook needs `Flutter.xcframework` from the SDK's artifact cache, and `pub get` does
+> not fetch it — `flutter build ios` normally does it implicitly, which is why a
+> hand-run `pod install` can pass on a machine that has already built once.
 
 > [!TIP]
 > The pods step is skipped for an Android build. `flutter build ios` runs
