@@ -75,15 +75,20 @@ Go to **Users and Access → Integrations → App Store Connect API** and press 
 
 ## 5. Hand the credentials to the DevOps team
 
-🤝 Share these three with DevOps so they can load them into the pipeline:
+🤝 Share all five with DevOps so they can load them into the pipeline:
 
-| What | File / value |
-|---|---|
-| 📄 **App Store Connect API key** | `AuthKey_<KeyID>.p8` (plus 🆔 Issuer ID and 🔑 Key ID from step 2) |
-| 🔐 **Distribution certificate** | `dist.p12` from step 3 |
-| 🔒 **`.p12` password** | the password you set when exporting |
+| What | File / value | Secret? |
+|---|---|---|
+| 📄 **App Store Connect API key** | `AuthKey_<KeyID>.p8` from [step 2](#2-create-an-app-store-connect-api-key) | 🔴 yes |
+| 🔐 **Distribution certificate** | `dist.p12` from [step 3](#3-export-the-certificate-as-a-p12-file) | 🔴 yes |
+| 🔒 **`.p12` password** | the password you set when exporting | 🔴 yes |
+| 🔑 **Key ID** | `2X9R4HXF34` — from [step 2](#2-create-an-app-store-connect-api-key), also in the `.p8` filename | 🟢 no |
+| 🆔 **Issuer ID** | `69a6de7e-1234-4c5b-8f21-9a0bcdef1234` — from [step 2](#2-create-an-app-store-connect-api-key) | 🟢 no |
 
-> 🔐 **Send them privately**
-> Use a password manager or a secrets vault — never email, Slack, or a git commit. These are signing keys for your App Store identity.
+> ⚠️ **The `.p8` on its own is not enough**
+> The pipeline signs every Apple API call with all three: the Key ID, the Issuer ID and the `.p8`. Miss the Issuer ID and every build fails to authenticate. The Issuer ID cannot be read off the file — it only lives on that App Store Connect page.
+
+> 🔐 **Send the secrets privately**
+> Use a password manager or a secrets vault — never email, Slack, or a git commit. These are signing keys for your App Store identity. The Key ID and Issuer ID are just identifiers, so those two are fine to paste anywhere.
 
 ---
