@@ -14,6 +14,7 @@
 | 4 | [Load Secret Files](#-4-load-secret-files) |
 | 5 | [Download Secret Files](#-5-download-secret-files) |
 | 6 | [Install Dependencies](#-6-install-dependencies) |
+| 7 | [Build Release](#-7-build-release) |
 
 ---
 
@@ -22,8 +23,10 @@
 Checks the user's input, then reads [`pipeline.properties`](pipeline.properties)
 and makes its values available to the rest of the pipeline.
 
-| Check | Rule |
+| Input | Rule |
 | :---- | :--- |
+| `PLATFORM` | `Android` or `iOS` |
+| `BUILD_RUNNER` | `Flutter` for a normal build, `Shorebird` for a code push release |
 | `BUILD_VERSION` | Present, and matches `MAJOR.MINOR.PATCH` |
 | `APP_BUILD_NUMBER` | Present, digits only, and `≥ 1` |
 
@@ -38,8 +41,19 @@ Names the run so the build history is readable:
 | Parse | `KEY=VALUE` per line; `#` and `!` start a comment |
 | Require | The `FLUTTER_*`, `GIT_*` and `INFISICAL_*` keys |
 | Build | The clone URL from `GIT_PROTOCOL`, `GIT_HOST` and `GIT_REPO_PATH` |
-| Reject | A `GIT_CREDENTIALS_ID` that looks like a raw token instead of an ID |
+| Reject | Any `*_CREDENTIALS_ID` that looks like a raw token instead of an ID |
+| Require | `S3_ENDPOINT`, `S3_REGION` and `S3_CREDENTIALS_ID`, but only when `SECRET_FILE.*` entries exist |
+| Require | `SHOREBIRD_TOKEN_CREDENTIALS_ID`, but only when `BUILD_RUNNER` is `Shorebird` |
 | Export | Each value becomes an environment variable for later steps |
+
+The flavour is not an input. Release builds always ship `prod`, so `BUILD_FLAVOR`
+and `DART_ENTRYPOINT` are fixed in the pipeline's `environment` block.
+
+### Shorebird is checked up front
+
+A `Shorebird` run ends this stage by proving the token is non-empty and installing
+the CLI if the agent does not have it, so a bad token fails in seconds instead of
+after the clone, the secrets and the whole dependency install.
 
 ---
 
@@ -132,7 +146,9 @@ it never appears in a command line.
 ## 📦 5. Download Secret Files
 
 Pulls the files that cannot be committed — the keystore, `google-services.json`,
-`key.properties`, the iOS plist — out of object storage and into the checkout.
+`key.properties`, the iOS plist — out of object storage and into the checkout. It is
+the second half of the `Load Secret Files` stage, documented on its own because it
+is configured separately.
 
 Each one is a line in [`pipeline.properties`](pipeline.properties):
 
@@ -184,12 +200,21 @@ Resolves the packages the build needs, before anything tries to compile.
 | 3 | iOS only: if the CocoaPods CLI is absent, install it with Homebrew |
 | 4 | iOS only: `fvm flutter precache --ios` — download the iOS engine artifacts |
 | 5 | iOS only: `cd ios && pod install --repo-update` |
+| 6 | `easy_localization:generate` — build `locale_keys.g.dart` from `assets/l10n` |
+| 7 | `build_runner build --delete-conflicting-outputs` — everything else `*.g.dart` |
+| 8 | Fail if no `*.g.dart` exists under `lib/` |
 
 ```text
 Got dependencies!
 pod: 1.16.2
 Pod installation complete!
+🧬  38 generated file(s) under lib/
 ```
+
+> [!IMPORTANT]
+> Codegen is not optional and it cannot move earlier. `*.g.dart` is git-ignored, so
+> a fresh clone ships none of it and the build will not compile — and Envied reads
+> the `.env` written by [step 4](#-4-load-secret-files), so this has to run after it.
 
 > [!NOTE]
 > Always `fvm flutter`, never plain `flutter`. Plain `flutter` uses whatever SDK is
@@ -207,3 +232,45 @@ Pod installation complete!
 > `pod install` on its own too, so this step mostly buys an earlier and clearer
 > failure. `--repo-update` refreshes the CocoaPods spec repo on every run — drop it
 > if the extra minute costs more than it saves.
+
+---
+
+## 🏗️ 7. Build Release
+
+Compiles the release artifact. `PLATFORM` picks the platform, `BUILD_RUNNER` picks
+the tool.
+
+| `PLATFORM` | `BUILD_RUNNER` | What runs |
+| :--------- | :------------- | :-------- |
+| `Android` | `Flutter` | `fvm flutter build appbundle --release` |
+| `Android` | `Shorebird` | `shorebird release -p android --artifact aab` |
+| `iOS` | either | Work in progress |
+
+Both Android paths get the same version and flavour arguments, because both CLIs
+spell them the same way:
+
+```text
+--flavor prod  -t lib/config/flavours/prod/prod.dart
+--build-name=$BUILD_VERSION  --build-number=$APP_BUILD_NUMBER
+```
+
+The Flutter path then locates the `.aab` under `build/app/outputs/bundle` and fails
+if there is none, so a build that "succeeded" without producing an artifact is
+still a red build.
+
+```text
+📦  build/app/outputs/bundle/prodRelease/app-prod-release.aab (52M)
+```
+
+### The jitpack fix
+
+Every Android build first writes `~/.gradle/init.d/jitpack-www.gradle`, which
+rewrites `https://www.jitpack.io` to `https://jitpack.io` for every repository
+Gradle resolves.
+
+> [!NOTE]
+> `image_cropper` 9.1.0 declares the `www` host, whose IPv4 address serves a GitHub
+> certificate, so Gradle cannot fetch `com.github.yalantis:ucrop`. The apex host is
+> healthy and is what `image_cropper` itself moved to in 11.0.0. Doing it in an init
+> script fixes every Gradle build on the agent without patching the app repo — delete
+> `ensureGradleJitpackFix` once the app upgrades past 11.0.0.
