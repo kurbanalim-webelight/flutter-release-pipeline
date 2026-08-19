@@ -1,4 +1,8 @@
-Map<String, String> projectConfig = [:]
+import groovy.transform.Field
+
+// @Field promotes this to a binding property. A plain top-level declaration is a local
+// of the script's run(), which the helper methods below cannot see.
+@Field Map<String, String> projectConfig = [:]
 
 pipeline {
     agent { label 'macos' }
@@ -447,7 +451,19 @@ void generateCode() {
 }
 
 void buildIOS() {
-    echo '🚧  iOS build - Work in Progress.'
+    // Signing is Automatic in Runner.xcodeproj with the team baked in, so the only
+    // requirement is that the agent's Xcode is signed in to the Apple account by hand.
+    if (params.BUILD_RUNNER != 'Shorebird') {
+        flutterBuildIOS()
+        return
+    }
+
+    withCredentials([string(
+        credentialsId: projectConfig.get('SHOREBIRD_TOKEN_CREDENTIALS_ID'),
+        variable: 'SHOREBIRD_TOKEN'
+    )]) {
+        shorebirdReleaseIOS()
+    }
 }
 
 void buildAndroid() {
@@ -525,5 +541,53 @@ void shorebirdReleaseAndroid() {
             --artifact aab \
             --build-name="$BUILD_VERSION" \
             --build-number="$APP_BUILD_NUMBER"
+    '''
+}
+
+void flutterBuildIOS() {
+    sh '''
+        set -eu
+
+        fvm flutter build ipa \
+            --release \
+            --flavor "$BUILD_FLAVOR" \
+            -t "$DART_ENTRYPOINT" \
+            --build-name="$BUILD_VERSION" \
+            --build-number="$APP_BUILD_NUMBER" \
+            --export-method app-store
+    '''
+
+    reportIpa()
+}
+
+void shorebirdReleaseIOS() {
+    sh '''
+        set -eu
+
+        export PATH="$HOME/.shorebird/bin:$PATH"
+
+        shorebird release -p ios \
+            --flavor "$BUILD_FLAVOR" \
+            -t "$DART_ENTRYPOINT" \
+            --build-name="$BUILD_VERSION" \
+            --build-number="$APP_BUILD_NUMBER" \
+            --export-method app-store
+    '''
+
+    reportIpa()
+}
+
+void reportIpa() {
+    sh '''
+        set -eu
+
+        IPA=$(find build/ios/ipa -name "*.ipa" -print -quit 2>/dev/null || true)
+
+        if [ -z "$IPA" ]; then
+            echo "❌  No .ipa found under build/ios/ipa" >&2
+            exit 1
+        fi
+
+        echo "📦  $IPA ($(du -h "$IPA" | cut -f1))"
     '''
 }
