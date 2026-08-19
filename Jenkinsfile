@@ -10,6 +10,10 @@ pipeline {
 
     environment {
         CONFIG_FILE = '/Users/macbook-pro-002/Desktop/release-pipeline/pipeline.properties'
+
+        // Release builds always ship the prod flavour. Both CLIs spell these the same way.
+        BUILD_FLAVOR    = 'prod'
+        DART_ENTRYPOINT = 'lib/config/flavours/prod/prod.dart'
     }
 
     parameters {
@@ -99,7 +103,8 @@ pipeline {
                         error "GIT_REPO_PATH must have no leading slash and no .git suffix, got '${repoPath}'."
                     }
 
-                    ['GIT_CREDENTIALS_ID', 'INFISICAL_TOKEN_CREDENTIALS_ID', 'S3_CREDENTIALS_ID'].each { String key ->
+                    ['GIT_CREDENTIALS_ID', 'INFISICAL_TOKEN_CREDENTIALS_ID', 'S3_CREDENTIALS_ID',
+                     'SHOREBIRD_TOKEN_CREDENTIALS_ID'].each { String key ->
                         if (projectConfig.get(key) ==~ /^(glpat-|gh[pousr]_|xox[baprs]-|st\.).*/) {
                             error "${key} looks like a secret, not a credential ID. " +
                                   'Store the secret in Jenkins Credentials and put its ID here.'
@@ -142,6 +147,10 @@ pipeline {
                     echo "🐦  Flutter:    ${env.FLUTTER_VERSION}"
                     echo "🔐  Infisical:  ${env.INFISICAL_ENV} @ ${env.INFISICAL_API_URL}"
                     echo "⚙️   Settings:   ${projectConfig.size()} loaded from ${env.CONFIG_FILE}"
+
+                    if (params.BUILD_RUNNER == 'Shorebird') {
+                        precheckShorebird()
+                    }
                 }
             }
         }
@@ -221,6 +230,21 @@ pipeline {
                     section('📦  Install Dependencies')
 
                     installDependencies(params.PLATFORM == 'iOS')
+                    generateCode()
+                }
+            }
+        }
+
+        stage('Build Release') {
+            steps {
+                script {
+                    section('🏗️   Build Release')
+
+                    if (params.PLATFORM == 'iOS') {
+                        buildIOS()
+                    } else {
+                        buildAndroid()
+                    }
                 }
             }
         }
@@ -370,4 +394,136 @@ void downloadSecretFiles(Map<String, String> secretFiles, String endpoint, Strin
             echo "⬇️   ${destination} <- ${source}"
         """
     }
+}
+
+void precheckShorebird() {
+    String credentialsId = projectConfig.get('SHOREBIRD_TOKEN_CREDENTIALS_ID')
+    if (!credentialsId) {
+        error "SHOREBIRD_TOKEN_CREDENTIALS_ID is required in ${env.CONFIG_FILE} " +
+              'when the build runner is Shorebird.'
+    }
+
+    withCredentials([string(credentialsId: credentialsId, variable: 'SHOREBIRD_TOKEN')]) {
+        sh '''
+            set -eu
+
+            if [ -z "$SHOREBIRD_TOKEN" ]; then
+                echo "❌  The Shorebird token credential is empty" >&2
+                exit 1
+            fi
+            echo "🔑  shorebird token: ${#SHOREBIRD_TOKEN} characters"
+
+            if ! [ -x "$HOME/.shorebird/bin/shorebird" ]; then
+                echo "⬇️  Shorebird not found on this agent - installing"
+                curl -fsSL https://raw.githubusercontent.com/shorebirdtech/install/main/install.sh | bash
+            fi
+
+            export PATH="$HOME/.shorebird/bin:$PATH"
+            echo "🧰  shorebird: $(shorebird --version 2>&1 | head -1)"
+        '''
+    }
+}
+
+void generateCode() {
+    sh '''
+        set -eu
+
+        # *.g.dart is git-ignored, so a fresh clone ships none of it and the build
+        # will not compile without this step. Envied reads the .env written by the
+        # Load Secret Files stage, which is why codegen has to run after it.
+        fvm dart run easy_localization:generate \
+            -S assets/l10n -s en.json -f keys -O lib/l10n -o locale_keys.g.dart
+        fvm dart run build_runner build --delete-conflicting-outputs
+
+        GENERATED=$(find lib -name "*.g.dart" | wc -l | tr -d ' ')
+
+        if [ "$GENERATED" = "0" ]; then
+            echo "❌  Code generation produced no *.g.dart files" >&2
+            exit 1
+        fi
+
+        echo "🧬  $GENERATED generated file(s) under lib/"
+    '''
+}
+
+void buildIOS() {
+    echo '🚧  iOS build - Work in Progress.'
+}
+
+void buildAndroid() {
+    ensureGradleJitpackFix()
+
+    if (params.BUILD_RUNNER != 'Shorebird') {
+        flutterBuildAndroid()
+        return
+    }
+
+    withCredentials([string(
+        credentialsId: projectConfig.get('SHOREBIRD_TOKEN_CREDENTIALS_ID'),
+        variable: 'SHOREBIRD_TOKEN'
+    )]) {
+        shorebirdReleaseAndroid()
+    }
+}
+
+void ensureGradleJitpackFix() {
+    // image_cropper 9.1.0 declares "https://www.jitpack.io", whose IPv4 address serves a
+    // GitHub certificate, so Gradle cannot fetch com.github.yalantis:ucrop. The apex host
+    // is healthy and is what image_cropper itself moved to in 11.0.0. Rewriting the URL in
+    // a Gradle init script fixes every Gradle build on the agent without touching the app
+    // repo. Drop this once the app upgrades image_cropper past 11.0.0.
+    sh '''
+        set -eu
+
+        mkdir -p "$HOME/.gradle/init.d"
+        cat > "$HOME/.gradle/init.d/jitpack-www.gradle" <<'INIT'
+allprojects {
+    buildscript.repositories.withType(MavenArtifactRepository) { repo ->
+        if (repo.url.toString().startsWith('https://www.jitpack.io')) { repo.url = 'https://jitpack.io' }
+    }
+    repositories.withType(MavenArtifactRepository) { repo ->
+        if (repo.url.toString().startsWith('https://www.jitpack.io')) { repo.url = 'https://jitpack.io' }
+    }
+}
+INIT
+
+        echo "🩹  jitpack repository fix installed for Gradle"
+    '''
+}
+
+void flutterBuildAndroid() {
+    sh '''
+        set -eu
+
+        fvm flutter build appbundle \
+            --release \
+            --flavor "$BUILD_FLAVOR" \
+            -t "$DART_ENTRYPOINT" \
+            --build-name="$BUILD_VERSION" \
+            --build-number="$APP_BUILD_NUMBER"
+
+        AAB=$(find build/app/outputs/bundle -name "*.aab" -print -quit 2>/dev/null || true)
+
+        if [ -z "$AAB" ]; then
+            echo "❌  No .aab found under build/app/outputs/bundle" >&2
+            exit 1
+        fi
+
+        echo "📦  $AAB ($(du -h "$AAB" | cut -f1))"
+    '''
+}
+
+void shorebirdReleaseAndroid() {
+    sh '''
+        set -eu
+
+        export PATH="$HOME/.shorebird/bin:$PATH"
+
+        shorebird release -p android \
+            --flavor "$BUILD_FLAVOR" \
+            -t "$DART_ENTRYPOINT" \
+            --artifact aab \
+            --build-name="$BUILD_VERSION" \
+            --build-number="$APP_BUILD_NUMBER"
+    '''
 }
