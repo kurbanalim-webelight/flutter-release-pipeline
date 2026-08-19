@@ -21,3 +21,69 @@ security find-identity -v -p codesigning | grep "Apple Distribution"
 > Xcode → ⚙️ Settings → 👤 Accounts → pick the team → 🔐 Manage Certificates → **➕** → **Apple Distribution**
 
 ---
+
+## 2. Create an App Store Connect API key
+
+🌐 Browser · [appstoreconnect.apple.com](https://appstoreconnect.apple.com)
+
+Go to **Users and Access → Integrations → App Store Connect API** and press **➕**. Name it `CI Pipeline` and set the role to **App Manager**.
+
+📝 Write down three things from that page:
+
+| What | Where | Looks like |
+|---|---|---|
+| 🆔 **Issuer ID** | the long id at the top | `69a6de7e-1234-4c5b-8f21-9a0bcdef1234` |
+| 🔑 **Key ID** | the short id in the row | `2X9R4HXF34` |
+| 📄 **The `.p8` file** | press **Download** | `AuthKey_2X9R4HXF34.p8` |
+
+> ⚠️ **One chance only**
+> The `.p8` downloads exactly once. Lose it and you must revoke the key and start again. 💾 Save it somewhere safe before you close the page.
+
+---
+
+## 3. Export the certificate as a `.p12` file
+
+🔐 Keychain Access app · Development Mac
+
+> 🖱️ This is the last time you use a window with buttons for signing.
+
+1. Open **Keychain Access**
+2. Click **My Certificates** in the sidebar
+3. Find `Apple Distribution: Your Company (TEAMID)`
+4. Click the small **▸** beside it — a 🗝️ private key must appear underneath. **No key means this Mac cannot export it**
+5. Right click → **Export**
+6. Format: **Personal Information Exchange (.p12)**
+7. Save as `dist.p12` and set a 🔒 password
+
+---
+
+## 4. Create the provisioning profile in Apple's portal
+
+🌐 Browser · [developer.apple.com](https://developer.apple.com)
+
+1. **Certificates, Identifiers & Profiles → Profiles**
+2. Press **➕**
+3. Choose **App Store Connect** under **Distribution**
+4. Pick the **App ID** — the bundle id of your app
+5. Pick the certificate from [step 3](#3-export-the-certificate-as-a-p12-file)
+6. Name it clearly, for example `CM App AppStore`, and **generate** it
+
+> 🚫 **Do not download it**
+> The profile only needs to exist. From now on the build pulls it from Apple every single time, so it can never go stale on you. ♻️
+
+---
+
+## 5. Hand the credentials to the DevOps team
+
+🤝 Share these three with DevOps so they can load them into the pipeline:
+
+| What | File / value |
+|---|---|
+| 📄 **App Store Connect API key** | `AuthKey_<KeyID>.p8` (plus 🆔 Issuer ID and 🔑 Key ID from step 2) |
+| 🔐 **Distribution certificate** | `dist.p12` from step 3 |
+| 🔒 **`.p12` password** | the password you set when exporting |
+
+> 🔐 **Send them privately**
+> Use a password manager or a secrets vault — never email, Slack, or a git commit. These are signing keys for your App Store identity.
+
+---
