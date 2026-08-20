@@ -98,6 +98,26 @@ Open the new **`play-store-ci`** service account → **Keys → Add key → Crea
 
 ---
 
+## 4. Give the service account access in Play Console
+
+🌐 Browser · [play.google.com/console](https://play.google.com/console)
+
+**Setup → API access** — the Cloud project must be linked and `play-store-ci` listed.
+
+**Users and permissions → Invite new user** — paste the **`client_email`** from the JSON, not your own email. Under **App permissions** pick YOUR APP and tick:
+
+| Tick | Permission |
+|---|---|
+| ✅ | **Release apps to testing tracks** |
+| ✅ | **View app information (read-only)** |
+
+**Apply**, then **Save changes**. 🔐
+
+> 👑 **Owner or admin only**
+> Nobody else can grant this.
+
+---
+
 # 🤝 Hand the credentials to the DevOps team
 
 > 📦 One handover for both platforms. Share these so DevOps can load them into the pipeline.
@@ -125,7 +145,7 @@ Open the new **`play-store-ci`** service account → **Keys → Add key → Crea
 | 📧 **`client_email`** | read it out of that JSON, e.g. `play-store-ci@your-project.iam.gserviceaccount.com` | 🟢 no |
 
 > 📧 **What the `client_email` is for**
-> It goes into the **Google Play Console** to grant YOUR APP access for CI/CD. Without that grant the key exists but can do nothing.
+> It goes into the **Google Play Console** to grant YOUR APP access for CI/CD, as in [Android step 4](#4-give-the-service-account-access-in-play-console). Without that grant the key exists but can do nothing.
 
 ---
 
