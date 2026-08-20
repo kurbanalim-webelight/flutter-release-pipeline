@@ -42,20 +42,82 @@ Go to **Users and Access → Integrations → App Store Connect API** and press 
 
 ---
 
-## 3. Hand the credentials to the DevOps team
+# 🤖 Android
 
-🤝 Share all three with DevOps so they can load them into the pipeline:
+> 🚀 Everything you need to let the pipeline talk to the Google Play Console.
+
+---
+
+## 1. Create the service account
+
+🌐 Browser · [console.cloud.google.com](https://console.cloud.google.com)
+
+**Google Cloud Console → select the project associated with YOUR APP → IAM & Admin → Service Accounts → Create service account**
+
+📝 Fill it in exactly like this:
+
+| Field | Value |
+|---|---|
+| 🏷️ **Name** | `play-store-ci` |
+| 🆔 **ID** | `play-store-ci` |
+| 💬 **Description** | `Service account for Google Play Console API access` |
+
+Leave **all** optional Google Cloud permissions and roles **empty** → **Continue** → **Done**.
+
+> 🚫 **No roles here**
+> Access is granted later inside the Play Console, not in Google Cloud. Adding roles here does nothing for the pipeline. 🙅
+
+---
+
+## 2. Create a JSON key
+
+🔑 Same page · the account you just made
+
+Open the new **`play-store-ci`** service account → **Keys → Add key → Create new key** → pick **JSON** → **Create**.
+
+📄 The file downloads on its own and contains fields such as:
+
+`type` · `project_id` · `private_key` · `client_email` · `client_id` …
+
+> ⚠️ **One chance only**
+> Google never shows the key again. Lose the file and you must create a new key. 💾 Save it somewhere safe.
+
+---
+
+# 🤝 Hand the credentials to the DevOps team
+
+> 📦 One handover for both platforms. Share these so DevOps can load them into the pipeline.
+
+---
+
+## 🍎 iOS — all three are mandatory
 
 | What | File / value | Secret? |
 |---|---|---|
-| 📄 **App Store Connect API key** | `AuthKey_<KeyID>.p8` from [step 2](#2-create-an-app-store-connect-api-key) | 🔴 yes |
-| 🔑 **Key ID** | `2X9R4HXF34` — from [step 2](#2-create-an-app-store-connect-api-key), also in the `.p8` filename | 🟢 no |
-| 🆔 **Issuer ID** | `69a6de7e-1234-4c5b-8f21-9a0bcdef1234` — from [step 2](#2-create-an-app-store-connect-api-key) | 🟢 no |
+| 📄 **App Store Connect API key** | `AuthKey_<KeyID>.p8` from [iOS step 2](#2-create-an-app-store-connect-api-key) | 🔴 yes |
+| 🔑 **Key ID** | `2X9R4HXF34` — from [iOS step 2](#2-create-an-app-store-connect-api-key), also in the `.p8` filename | 🟢 no |
+| 🆔 **Issuer ID** | `69a6de7e-1234-4c5b-8f21-9a0bcdef1234` — from [iOS step 2](#2-create-an-app-store-connect-api-key) | 🟢 no |
 
-> ❗ **All three are mandatory**
+> ❗ **The `.p8` on its own is not enough**
 > The pipeline signs every Apple API call with all three: the Key ID, the Issuer ID and the `.p8`. Miss the Issuer ID and every build fails to authenticate. The Issuer ID cannot be read off the file — it only lives on that App Store Connect page.
 
-> 🔐 **Send the `.p8` privately**
-> Use a password manager or a secrets vault — never email, Slack, or a git commit. It is a signing key for your App Store identity. The Key ID and Issuer ID are just identifiers, so those two are fine to paste anywhere.
+---
+
+## 🤖 Android
+
+| What | File / value | Secret? |
+|---|---|---|
+| 📄 **Service account key** | the JSON downloaded in [Android step 2](#2-create-a-json-key) | 🔴 yes |
+| 📧 **`client_email`** | read it out of that JSON, e.g. `play-store-ci@your-project.iam.gserviceaccount.com` | 🟢 no |
+
+> 📧 **What the `client_email` is for**
+> It goes into the **Google Play Console** to grant YOUR APP access for CI/CD. Without that grant the key exists but can do nothing.
+
+---
+
+## 🔐 How to send them
+
+> 🔒 **Secrets go through a password manager or a secrets vault — never email, Slack, or a git commit.**
+> The `.p8` signs your App Store identity and the JSON can publish to your Play Store listing. The Key ID, Issuer ID and `client_email` are just identifiers, so those are fine to paste anywhere.
 
 ---
