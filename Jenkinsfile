@@ -134,6 +134,24 @@ pipeline {
                         }
                     }
 
+                    if (params.PLATFORM == 'Android') {
+                        String packageName = projectConfig.get('ANDROID_PACKAGE_NAME')
+                        if (!packageName) {
+                            error "ANDROID_PACKAGE_NAME is required in ${env.CONFIG_FILE} for an Android build."
+                        }
+                        if (!(packageName ==~ /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/)) {
+                            error "ANDROID_PACKAGE_NAME must be a package id like com.example.app, got '${packageName}'."
+                        }
+                        env.ANDROID_PACKAGE_NAME = packageName
+                        env.PLAY_KEY_FILE        = 'private_keys/play-store.json'
+
+                        if (!projectConfig.get('SECRET_FILE.private_keys/play-store.json')) {
+                            error 'The Play upload needs the service account key. Add ' +
+                                  'SECRET_FILE.private_keys/play-store.json=<s3 uri> to ' +
+                                  env.CONFIG_FILE + '.'
+                        }
+                    }
+
                     if (projectConfig.any { String key, String value -> key.startsWith('SECRET_FILE.') }) {
                         List<String> missingStorage =
                             ['S3_ENDPOINT', 'S3_REGION', 'S3_CREDENTIALS_ID'].findAll { String key ->
@@ -171,6 +189,8 @@ pipeline {
                     echo "⚙️   Settings:   ${projectConfig.size()} loaded from ${env.CONFIG_FILE}"
                     if (params.PLATFORM == 'iOS') {
                         echo "🚀  TestFlight: key ${env.ASC_KEY_ID}"
+                    } else {
+                        echo "🚀  Play:       ${env.ANDROID_PACKAGE_NAME} -> internal track"
                     }
 
                     if (params.BUILD_RUNNER == 'Shorebird') {
@@ -274,15 +294,16 @@ pipeline {
             }
         }
 
-        stage('Upload to TestFlight') {
-            when {
-                expression { params.PLATFORM == 'iOS' }
-            }
+        stage('Upload Release') {
             steps {
                 script {
-                    section('🚀  Upload to TestFlight')
-
-                    uploadToTestFlight()
+                    if (params.PLATFORM == 'iOS') {
+                        section('🚀  Upload to TestFlight')
+                        uploadToTestFlight()
+                    } else {
+                        section('🚀  Upload to Play Internal Testing')
+                        uploadToPlay()
+                    }
                 }
             }
         }
@@ -621,7 +642,6 @@ void shorebirdReleaseIOS() {
     reportIpa()
 }
 
-// iOS only for now. Android gets its own upload stage when Play publishing lands.
 void uploadToTestFlight() {
     sh '''
         set -eu
@@ -651,6 +671,47 @@ void uploadToTestFlight() {
             --apiIssuer "$ASC_ISSUER_ID"
 
         echo "✅  Uploaded to TestFlight - Apple processes the build before it appears"
+    '''
+}
+
+void uploadToPlay() {
+    ensureTool('fastlane', 'fastlane')
+    sh '''
+        set -eu
+
+        # fastlane refuses to run under a non-UTF-8 locale, which is what a Jenkins
+        # agent shell gets by default.
+        export LC_ALL=en_US.UTF-8
+        export LANG=en_US.UTF-8
+
+        AAB=$(find build/app/outputs/bundle -name "*.aab" -print -quit 2>/dev/null || true)
+
+        if [ -z "$AAB" ]; then
+            echo "❌  No .aab found under build/app/outputs/bundle" >&2
+            exit 1
+        fi
+
+        # Same handling as the App Store Connect key: the service account JSON comes
+        # down under a generic name, so rotating the key never touches this pipeline.
+        if [ ! -s "$PLAY_KEY_FILE" ]; then
+            echo "❌  $PLAY_KEY_FILE is missing - the secret file did not download" >&2
+            exit 1
+        fi
+
+        echo "📤  Uploading $AAB ($(du -h "$AAB" | cut -f1)) to $ANDROID_PACKAGE_NAME"
+
+        fastlane supply \
+            --aab "$AAB" \
+            --package_name "$ANDROID_PACKAGE_NAME" \
+            --json_key "$PLAY_KEY_FILE" \
+            --track internal \
+            --release_status completed \
+            --skip_upload_metadata \
+            --skip_upload_images \
+            --skip_upload_screenshots \
+            --skip_upload_changelogs
+
+        echo "✅  Uploaded to internal testing - Google processes the build before testers see it"
     '''
 }
 

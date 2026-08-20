@@ -15,6 +15,7 @@
 | 5 | [Download Secret Files](#-5-download-secret-files) |
 | 6 | [Install Dependencies](#-6-install-dependencies) |
 | 7 | [Build Release](#-7-build-release) |
+| 8 | [Upload Release](#-8-upload-release) |
 
 ---
 
@@ -274,3 +275,48 @@ Gradle resolves.
 > healthy and is what `image_cropper` itself moved to in 11.0.0. Doing it in an init
 > script fixes every Gradle build on the agent without patching the app repo — delete
 > `ensureGradleJitpackFix` once the app upgrades past 11.0.0.
+
+---
+
+## 🚀 8. Upload Release
+
+Ships the artifact the previous stage produced. `PLATFORM` picks the destination;
+`BUILD_RUNNER` makes no difference, because a Shorebird release is a full build too.
+
+| `PLATFORM` | Destination | Tool |
+| :--------- | :---------- | :--- |
+| `Android` | Play **internal testing** track, released to testers | `fastlane supply` |
+| `iOS` | TestFlight | `xcrun altool --upload-app` |
+
+The Android path:
+
+| # | Action |
+| :-: | :----- |
+| 1 | If the fastlane CLI is absent, install it with Homebrew |
+| 2 | Locate the `.aab` under `build/app/outputs/bundle`, fail if there is none |
+| 3 | Fail if `private_keys/play-store.json` did not download |
+| 4 | `fastlane supply --track internal --release_status completed` |
+
+```text
+📤  Uploading build/app/outputs/bundle/prodRelease/app-prod-release.aab (52M) to com.chinmayamission.app
+✅  Uploaded to internal testing - Google processes the build before testers see it
+```
+
+> [!IMPORTANT]
+> `ANDROID_PACKAGE_NAME` must match the application id of the listing exactly, and
+> the service account's `client_email` needs release permission on that app inside
+> the Play Console. The key existing in Google Cloud grants nothing on its own —
+> see the [Developer Handbook](DEVELOPER_HANDBOOK.md#-android).
+
+> [!NOTE]
+> Only metadata upload is skipped, not the release itself: store listing, images,
+> screenshots and changelogs stay whatever the Play Console already has, so CI never
+> overwrites text somebody edited by hand.
+
+> [!NOTE]
+> The first upload of a package cannot come from the API — Play requires one manual
+> `.aab` upload to create the app entry before the service account can add builds.
+
+> [!TIP]
+> A build number Play has already seen is rejected. `APP_BUILD_NUMBER` has to go up
+> on every run that reaches the same track.

@@ -29,6 +29,7 @@ project different.
 | 15  | [`SECRET_FILE.*`](#-15-secret_file)                                     |        ⚠️ Per file        | Which file goes where in the project                |
 | 16  | [`ASC_KEY_ID`](#-16-asc_key_id)                                         | ⚠️ iOS builds only        | Which App Store Connect API key signs the upload    |
 | 17  | [`ASC_ISSUER_ID`](#-17-asc_issuer_id)                                   | ⚠️ iOS builds only        | Which App Store Connect account that key belongs to |
+| 18  | [`ANDROID_PACKAGE_NAME`](#-18-android_package_name)                     | ⚠️ Android builds only    | Which Play listing the build is uploaded to         |
 
 ---
 
@@ -476,6 +477,39 @@ ASC_ISSUER_ID=69a6de7e-1234-4c5b-8f21-9a0bcdef1234
 **Why it exists** — Apple authenticates the upload with all three pieces: the Key ID,
 the Issuer ID and the `.p8`. The Issuer ID cannot be read off the file, so it has to
 be written down here.
+
+---
+
+## 🤖 18. `ANDROID_PACKAGE_NAME`
+
+|              |                                                      |
+| :----------- | :--------------------------------------------------- |
+| **Example**  | `com.chinmayamission.app`                            |
+| **Format**   | The application id, reverse-DNS                       |
+| **Required** | ⚠️ Only for an Android build                        |
+
+**What it is** — the package name Google Play lists the app under, the same value as
+the `prod` flavour's `applicationId`. Not a secret.
+
+```properties
+ANDROID_PACKAGE_NAME=com.chinmayamission.app
+SECRET_FILE.private_keys/play-store.json=s3://my-bucket/play-store.json
+```
+
+**Why it exists** — `fastlane supply` addresses a Play listing by package name, not by
+repository or artifact, so it has to be written down. The upload stage checks the
+shape before the build starts, because a typo here otherwise fails an hour later
+against Play's API instead of in the first ten seconds.
+
+> [!IMPORTANT]
+> The service account JSON is the secret and travels as a `SECRET_FILE.*` entry like
+> the Apple `.p8`. The path is fixed at `private_keys/play-store.json` — the upload
+> stage looks there and nowhere else.
+
+> [!NOTE]
+> Every Android build lands on the **internal testing** track with the release live
+> for internal testers. Promotion to closed, open or production testing stays a
+> manual step in the Play Console.
 
 ---
 
