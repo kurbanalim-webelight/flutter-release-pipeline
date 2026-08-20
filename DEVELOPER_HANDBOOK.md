@@ -51,7 +51,18 @@ Go to **Users and Access → Integrations → App Store Connect API** and press 
 
 ---
 
-## 1. Create the service account
+## 1. Enable the Google Play Android Developer API
+
+🌐 Browser · [console.cloud.google.com](https://console.cloud.google.com)
+
+**Google Cloud Console → select the project associated with YOUR APP → APIs & Services → Library** → search **Google Play Android Developer API** → **Enable**.
+
+> ⚠️ **Do this first**
+> Without this API enabled the service account key authenticates fine but every upload fails. 🚫
+
+---
+
+## 2. Create the service account
 
 🌐 Browser · [console.cloud.google.com](https://console.cloud.google.com)
 
@@ -72,7 +83,7 @@ Leave **all** optional Google Cloud permissions and roles **empty** → **Contin
 
 ---
 
-## 2. Create a JSON key
+## 3. Create a JSON key
 
 🔑 Same page · the account you just made
 
@@ -110,7 +121,7 @@ Open the new **`play-store-ci`** service account → **Keys → Add key → Crea
 
 | What | File / value | Secret? |
 |---|---|---|
-| 📄 **Service account key** | the JSON downloaded in [Android step 2](#2-create-a-json-key) | 🔴 yes |
+| 📄 **Service account key** | the JSON downloaded in [Android step 3](#3-create-a-json-key) | 🔴 yes |
 | 📧 **`client_email`** | read it out of that JSON, e.g. `play-store-ci@your-project.iam.gserviceaccount.com` | 🟢 no |
 
 > 📧 **What the `client_email` is for**
