@@ -351,6 +351,11 @@ void installDependencies(boolean withPods) {
 
         fvm flutter precache --ios
         cd ios
+
+        rm -rf Pods
+        rm -f Podfile.lock
+        pod setup
+
         pod install --repo-update
     '''
 }
