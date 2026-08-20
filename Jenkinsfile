@@ -410,6 +410,11 @@ void exportEnvFile() {
             exit 1
         fi
 
+        # Infisical emits KEY='value'; envied does not strip the quotes, so an
+        # empty secret reaches Dart as the literal two-character string ''.
+        sed -E "s/^([A-Za-z_][A-Za-z0-9_]*)='(.*)'\$/\\1=\\2/" .env > .env.tmp
+        mv .env.tmp .env
+
         echo "🗝️   .env written to $(pwd) with $(grep -c "^[A-Za-z_]" .env) variable(s)"
     '''
 }
