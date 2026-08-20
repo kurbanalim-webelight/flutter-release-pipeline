@@ -311,6 +311,13 @@
           <p>Go to <strong>Users and Access → Integrations → App Store Connect API</strong> and press
           <strong>+</strong>. Name it <span class="mono">CI Pipeline</span> and set the role to
           <strong>App Manager</strong>.</p>
+          <div class="callout blue">
+            <p><b>Which role?</b>The <strong>Access</strong> box offers Admin, App Manager, Developer, Finance,
+            Sales and Reports, Customer Support and Marketing. Pick <strong>App Manager</strong> — it is the
+            smallest role that can upload builds and manage App Store versions. <strong>Admin</strong> works too
+            but hands CI far more than it needs, and <strong>Developer</strong> cannot manage versions, so the
+            upload step fails.</p>
+          </div>
           <p>Write down three things from that page:</p>
           <ul>
             <li><strong>Issuer ID</strong> — the long id at the top, like <span class="mono">69a6de7e-1234-4c5b-8f21-9a0bcdef1234</span></li>

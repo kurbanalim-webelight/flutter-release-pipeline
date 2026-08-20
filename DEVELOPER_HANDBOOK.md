@@ -29,6 +29,9 @@ Log in with your Apple account so Xcode can pull down and install the signing pi
 
 Go to **Users and Access → Integrations → App Store Connect API** and press **➕**. Name it `CI Pipeline` and set the role to **App Manager**.
 
+> 🎯 **Which role?**
+> The **Access** box offers Admin, App Manager, Developer, Finance, Sales and Reports, Customer Support and Marketing. Pick **App Manager** — the smallest role that can upload builds and manage App Store versions. **Admin** works too but hands CI far more than it needs, and **Developer** cannot manage versions, so the upload step fails.
+
 📝 Write down three things from that page:
 
 | What | Where | Looks like |
