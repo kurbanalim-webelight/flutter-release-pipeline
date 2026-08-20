@@ -10,33 +10,35 @@ project different.
 
 ## 📖 At a glance
 
-| # | Variable | Required | In one line |
-| :-: | :------- | :------: | :---------- |
-| 1 | [`FLUTTER_VERSION`](#-1-flutter_version) | ✅ Always | Which Flutter SDK builds the app |
-| 2 | [`GIT_PROTOCOL`](#-2-git_protocol) | ✅ Always | How to reach GitLab |
-| 3 | [`GIT_HOST`](#-3-git_host) | ✅ Always | Which GitLab server |
-| 4 | [`GIT_REPO_PATH`](#-4-git_repo_path) | ✅ Always | Which project on that server |
-| 5 | [`GIT_BRANCH`](#-5-git_branch) | ✅ Always | Which branch to clone |
-| 6 | [`GIT_CREDENTIALS_ID`](#-6-git_credentials_id) | ✅ Always | Where the git credential is kept |
-| 7 | [`INFISICAL_API_URL`](#-7-infisical_api_url) | ✅ Always | Which Infisical server |
-| 8 | [`INFISICAL_PROJECT_ID`](#-8-infisical_project_id) | ✅ Always | Which Infisical project |
-| 9 | [`INFISICAL_ENV`](#-9-infisical_env) | ✅ Always | Which Infisical environment |
-| 10 | [`INFISICAL_TOKEN_CREDENTIALS_ID`](#-10-infisical_token_credentials_id) | ✅ Always | Where the Infisical token is kept |
-| 11 | [`SHOREBIRD_TOKEN_CREDENTIALS_ID`](#-11-shorebird_token_credentials_id) | ⚠️ Shorebird only | Where the Shorebird token is kept |
-| 12 | [`S3_ENDPOINT`](#-12-s3_endpoint) | ⚠️ With secret files | Which storage service the files come from |
-| 13 | [`S3_REGION`](#-13-s3_region) | ⚠️ With secret files | Which region the bucket is in |
-| 14 | [`S3_CREDENTIALS_ID`](#-14-s3_credentials_id) | ⚠️ With secret files | Where the storage keys are kept |
-| 15 | [`SECRET_FILE.*`](#-15-secret_file) | ⚠️ Per file | Which file goes where in the project |
+|  #  | Variable                                                                |         Required          | In one line                                         |
+| :-: | :---------------------------------------------------------------------- | :-----------------------: | :-------------------------------------------------- |
+|  1  | [`FLUTTER_VERSION`](#-1-flutter_version)                                |         ✅ Always         | Which Flutter SDK builds the app                    |
+|  2  | [`GIT_PROTOCOL`](#-2-git_protocol)                                      |         ✅ Always         | How to reach GitLab                                 |
+|  3  | [`GIT_HOST`](#-3-git_host)                                              |         ✅ Always         | Which GitLab server                                 |
+|  4  | [`GIT_REPO_PATH`](#-4-git_repo_path)                                    |         ✅ Always         | Which project on that server                        |
+|  5  | [`GIT_BRANCH`](#-5-git_branch)                                          |         ✅ Always         | Which branch to clone                               |
+|  6  | [`GIT_CREDENTIALS_ID`](#-6-git_credentials_id)                          |         ✅ Always         | Where the git credential is kept                    |
+|  7  | [`INFISICAL_API_URL`](#-7-infisical_api_url)                            |         ✅ Always         | Which Infisical server                              |
+|  8  | [`INFISICAL_PROJECT_ID`](#-8-infisical_project_id)                      |         ✅ Always         | Which Infisical project                             |
+|  9  | [`INFISICAL_ENV`](#-9-infisical_env)                                    |         ✅ Always         | Which Infisical environment                         |
+| 10  | [`INFISICAL_TOKEN_CREDENTIALS_ID`](#-10-infisical_token_credentials_id) |         ✅ Always         | Where the Infisical token is kept                   |
+| 11  | [`SHOREBIRD_TOKEN_CREDENTIALS_ID`](#-11-shorebird_token_credentials_id) |     ⚠️ Shorebird only     | Where the Shorebird token is kept                   |
+| 12  | [`S3_ENDPOINT`](#-12-s3_endpoint)                                       |   ⚠️ With secret files    | Which storage service the files come from           |
+| 13  | [`S3_REGION`](#-13-s3_region)                                           |   ⚠️ With secret files    | Which region the bucket is in                       |
+| 14  | [`S3_CREDENTIALS_ID`](#-14-s3_credentials_id)                           |   ⚠️ With secret files    | Where the storage keys are kept                     |
+| 15  | [`SECRET_FILE.*`](#-15-secret_file)                                     |        ⚠️ Per file        | Which file goes where in the project                |
+| 16  | [`ASC_KEY_ID`](#-16-asc_key_id)                                         | ⚠️ TestFlight upload only | Which App Store Connect API key signs the upload    |
+| 17  | [`ASC_ISSUER_ID`](#-17-asc_issuer_id)                                   | ⚠️ TestFlight upload only | Which App Store Connect account that key belongs to |
 
 ---
 
 ## 🎯 1. `FLUTTER_VERSION`
 
-| | |
-| :--- | :--- |
-| **Example** | `3.44.6` |
-| **Format** | `MAJOR.MINOR.PATCH` |
-| **Required** | ✅ Always |
+|              |                     |
+| :----------- | :------------------ |
+| **Example**  | `3.44.6`            |
+| **Format**   | `MAJOR.MINOR.PATCH` |
+| **Required** | ✅ Always           |
 
 **What it is** — the exact Flutter SDK version to build with.
 
@@ -56,11 +58,11 @@ produces the same build on any machine, today or in six months.
 
 ## 🔌 2. `GIT_PROTOCOL`
 
-| | |
-| :--- | :--- |
-| **Example** | `https` |
-| **Format** | `ssh` or `https` |
-| **Required** | ✅ Always |
+|              |                  |
+| :----------- | :--------------- |
+| **Example**  | `https`          |
+| **Format**   | `ssh` or `https` |
+| **Required** | ✅ Always        |
 
 **What it is** — how the pipeline reaches GitLab.
 
@@ -70,9 +72,9 @@ GIT_PROTOCOL=https
 
 It decides how the clone URL is built:
 
-| Value | URL |
-| :---- | :-- |
-| `ssh` | `git@HOST:PATH.git` |
+| Value   | URL                     |
+| :------ | :---------------------- |
+| `ssh`   | `git@HOST:PATH.git`     |
 | `https` | `https://HOST/PATH.git` |
 
 **Why it exists** — SSH needs port 22 open to the GitLab server. That is normal
@@ -87,11 +89,11 @@ through. One setting lets the same pipeline run in both places.
 
 ## 🌐 3. `GIT_HOST`
 
-| | |
-| :--- | :--- |
-| **Example** | `gitlab.webelight.co.in` |
-| **Format** | A hostname, no scheme and no trailing slash |
-| **Required** | ✅ Always |
+|              |                                             |
+| :----------- | :------------------------------------------ |
+| **Example**  | `gitlab.webelight.co.in`                    |
+| **Format**   | A hostname, no scheme and no trailing slash |
+| **Required** | ✅ Always                                   |
 
 **What it is** — the GitLab server the project lives on.
 
@@ -107,11 +109,11 @@ instead of being spelled out again in every project.
 
 ## 📁 4. `GIT_REPO_PATH`
 
-| | |
-| :--- | :--- |
-| **Example** | `webelight/ccmt/chinmaya-mission-flutter` |
-| **Format** | Group and project, no leading slash, no `.git` suffix |
-| **Required** | ✅ Always |
+|              |                                                       |
+| :----------- | :---------------------------------------------------- |
+| **Example**  | `webelight/ccmt/chinmaya-mission-flutter`             |
+| **Format**   | Group and project, no leading slash, no `.git` suffix |
+| **Required** | ✅ Always                                             |
 
 **What it is** — which project to clone from that server.
 
@@ -130,11 +132,11 @@ git@gitlab.webelight.co.in:webelight/ccmt/chinmaya-mission-flutter.git
 
 ## 🌿 5. `GIT_BRANCH`
 
-| | |
-| :--- | :--- |
-| **Example** | `main` |
-| **Format** | A branch name |
-| **Required** | ✅ Always |
+|              |               |
+| :----------- | :------------ |
+| **Example**  | `main`        |
+| **Format**   | A branch name |
+| **Required** | ✅ Always     |
 
 **What it is** — the branch to clone.
 
@@ -150,11 +152,11 @@ depending on whatever the remote's default happens to be.
 
 ## 🔑 6. `GIT_CREDENTIALS_ID`
 
-| | |
-| :--- | :--- |
-| **Example** | `gitlab-token` |
-| **Format** | A Jenkins credential ID |
-| **Required** | ✅ Always |
+|              |                         |
+| :----------- | :---------------------- |
+| **Example**  | `gitlab-token`          |
+| **Format**   | A Jenkins credential ID |
+| **Required** | ✅ Always               |
 
 **What it is** — the **name** of a Jenkins credential. Never the key or token
 itself.
@@ -165,10 +167,10 @@ GIT_CREDENTIALS_ID=gitlab-token
 
 The credential is created in Jenkins, and its kind depends on `GIT_PROTOCOL`:
 
-| `GIT_PROTOCOL` | Kind | Username | Secret |
-| :------------- | :--- | :------- | :----- |
-| `ssh` | SSH Username with private key | `git` | The private key |
-| `https` | Username with password | `oauth2` | The access token |
+| `GIT_PROTOCOL` | Kind                          | Username | Secret           |
+| :------------- | :---------------------------- | :------- | :--------------- |
+| `ssh`          | SSH Username with private key | `git`    | The private key  |
+| `https`        | Username with password        | `oauth2` | The access token |
 
 **Why it exists** — cloning a private repository needs credentials, and this file
 is not a safe place for them. Storing only the name keeps the secret inside
@@ -183,11 +185,11 @@ it.
 
 ## ☁️ 7. `INFISICAL_API_URL`
 
-| | |
-| :--- | :--- |
-| **Example** | `https://app.infisical.com` |
-| **Format** | A URL, no trailing slash |
-| **Required** | ✅ Always |
+|              |                             |
+| :----------- | :-------------------------- |
+| **Example**  | `https://app.infisical.com` |
+| **Format**   | A URL, no trailing slash    |
+| **Required** | ✅ Always                   |
 
 **What it is** — the Infisical server the secrets are read from.
 
@@ -202,11 +204,11 @@ Keeping it here means the pipeline works against either without a code change.
 
 ## 🆔 8. `INFISICAL_PROJECT_ID`
 
-| | |
-| :--- | :--- |
-| **Example** | `7f3a1c2e-...` |
-| **Format** | The project ID from the Infisical dashboard |
-| **Required** | ✅ Always |
+|              |                                             |
+| :----------- | :------------------------------------------ |
+| **Example**  | `7f3a1c2e-...`                              |
+| **Format**   | The project ID from the Infisical dashboard |
+| **Required** | ✅ Always                                   |
 
 **What it is** — which Infisical project holds this app's secrets.
 
@@ -221,11 +223,11 @@ part, so it changes for every project using this pipeline.
 
 ## 🏷️ 9. `INFISICAL_ENV`
 
-| | |
-| :--- | :--- |
-| **Example** | `dev` |
-| **Format** | An environment slug from the Infisical project |
-| **Required** | ✅ Always |
+|              |                                                |
+| :----------- | :--------------------------------------------- |
+| **Example**  | `dev`                                          |
+| **Format**   | An environment slug from the Infisical project |
+| **Required** | ✅ Always                                      |
 
 **What it is** — which set of values to export, e.g. `dev`, `staging`, `prod`.
 
@@ -240,11 +242,11 @@ This decides which set lands in `.env`.
 
 ## 🎫 10. `INFISICAL_TOKEN_CREDENTIALS_ID`
 
-| | |
-| :--- | :--- |
-| **Example** | `infisical-token` |
-| **Format** | A Jenkins credential ID |
-| **Required** | ✅ Always |
+|              |                         |
+| :----------- | :---------------------- |
+| **Example**  | `infisical-token`       |
+| **Format**   | A Jenkins credential ID |
+| **Required** | ✅ Always               |
 
 **What it is** — the **name** of a Jenkins credential. Never the token.
 
@@ -254,11 +256,11 @@ INFISICAL_TOKEN_CREDENTIALS_ID=infisical-token
 
 The credential is created in Jenkins:
 
-| Field | Value |
-| :---- | :---- |
-| Kind | Secret text |
+| Field  | Value                       |
+| :----- | :-------------------------- |
+| Kind   | Secret text                 |
 | Secret | The Infisical service token |
-| ID | `infisical-token` |
+| ID     | `infisical-token`           |
 
 **Why it exists** — reading secrets requires a secret of its own. Storing only the
 name keeps the token inside Jenkins, and the pipeline hands it to the CLI through
@@ -268,10 +270,10 @@ the environment rather than a command line, so it never reaches the build log.
 
 ## 🐦 11. `SHOREBIRD_TOKEN_CREDENTIALS_ID`
 
-| | |
-| :--- | :--- |
-| **Example** | `shorebird-token` |
-| **Format** | A Jenkins credential ID |
+|              |                                              |
+| :----------- | :------------------------------------------- |
+| **Example**  | `shorebird-token`                            |
+| **Format**   | A Jenkins credential ID                      |
 | **Required** | ⚠️ Only when the build runner is `Shorebird` |
 
 **What it is** — the **name** of a Jenkins credential. Not the token.
@@ -291,10 +293,10 @@ above: the name lives here, the secret stays in Jenkins.
 
 ## 🪣 12. `S3_ENDPOINT`
 
-| | |
-| :--- | :--- |
-| **Example** | `https://a1b2c3d4.r2.cloudflarestorage.com` |
-| **Format** | A URL, no trailing slash |
+|              |                                              |
+| :----------- | :------------------------------------------- |
+| **Example**  | `https://a1b2c3d4.r2.cloudflarestorage.com`  |
+| **Format**   | A URL, no trailing slash                     |
 | **Required** | ⚠️ Only when `SECRET_FILE.*` entries are set |
 
 **What it is** — the API address of the object storage the secret files come from.
@@ -306,13 +308,13 @@ S3_ENDPOINT=https://a1b2c3d4.r2.cloudflarestorage.com
 Any service that speaks the S3 API works. The endpoint is the only thing that
 changes between them:
 
-| Service | Endpoint |
-| :------ | :------- |
-| AWS S3 | `https://s3.<region>.amazonaws.com` |
-| Cloudflare R2 | `https://<account-id>.r2.cloudflarestorage.com` |
-| MinIO | `https://minio.example.com:9000` |
-| Backblaze B2 | `https://s3.<region>.backblazeb2.com` |
-| DigitalOcean Spaces | `https://<region>.digitaloceanspaces.com` |
+| Service             | Endpoint                                        |
+| :------------------ | :---------------------------------------------- |
+| AWS S3              | `https://s3.<region>.amazonaws.com`             |
+| Cloudflare R2       | `https://<account-id>.r2.cloudflarestorage.com` |
+| MinIO               | `https://minio.example.com:9000`                |
+| Backblaze B2        | `https://s3.<region>.backblazeb2.com`           |
+| DigitalOcean Spaces | `https://<region>.digitaloceanspaces.com`       |
 
 **Why it exists** — the pipeline downloads with the aws CLI, which talks the S3
 protocol to whatever address it is given. Keeping that address here means moving
@@ -322,10 +324,10 @@ buckets between providers is a one-line change, with no `Jenkinsfile` edit.
 
 ## 🌍 13. `S3_REGION`
 
-| | |
-| :--- | :--- |
-| **Example** | `auto` |
-| **Format** | A region name |
+|              |                                              |
+| :----------- | :------------------------------------------- |
+| **Example**  | `auto`                                       |
+| **Format**   | A region name                                |
 | **Required** | ⚠️ Only when `SECRET_FILE.*` entries are set |
 
 **What it is** — the region the bucket lives in.
@@ -334,11 +336,11 @@ buckets between providers is a one-line change, with no `Jenkinsfile` edit.
 S3_REGION=auto
 ```
 
-| Service | Value |
-| :------ | :---- |
-| AWS S3 | The bucket's real region, e.g. `ap-south-1` |
-| Cloudflare R2 | `auto` |
-| MinIO | `us-east-1` unless configured otherwise |
+| Service       | Value                                       |
+| :------------ | :------------------------------------------ |
+| AWS S3        | The bucket's real region, e.g. `ap-south-1` |
+| Cloudflare R2 | `auto`                                      |
+| MinIO         | `us-east-1` unless configured otherwise     |
 
 **Why it exists** — the S3 protocol signs every request with a region, so one is
 always required even where the service has no regions. Providers that do have them
@@ -348,10 +350,10 @@ reject a wrong value, so it cannot be hardcoded.
 
 ## 🗝️ 14. `S3_CREDENTIALS_ID`
 
-| | |
-| :--- | :--- |
-| **Example** | `object-storage-credentials` |
-| **Format** | A Jenkins credential ID |
+|              |                                              |
+| :----------- | :------------------------------------------- |
+| **Example**  | `object-storage-credentials`                 |
+| **Format**   | A Jenkins credential ID                      |
 | **Required** | ⚠️ Only when `SECRET_FILE.*` entries are set |
 
 **What it is** — the **name** of a Jenkins credential. Never the keys themselves.
@@ -362,12 +364,12 @@ S3_CREDENTIALS_ID=object-storage-credentials
 
 The credential is created in Jenkins:
 
-| Field | Value |
-| :---- | :---- |
-| Kind | Username with password |
-| Username | Access Key ID |
-| Password | Secret Access Key |
-| ID | `object-storage-credentials` |
+| Field    | Value                        |
+| :------- | :--------------------------- |
+| Kind     | Username with password       |
+| Username | Access Key ID                |
+| Password | Secret Access Key            |
+| ID       | `object-storage-credentials` |
 
 Read-only access to the one bucket is enough — the pipeline only downloads.
 
@@ -383,11 +385,11 @@ they never reach a command line or the build log.
 
 ## 📦 15. `SECRET_FILE.*`
 
-| | |
-| :--- | :--- |
-| **Example** | `SECRET_FILE.android/key.properties=s3://my-bucket/key.properties` |
-| **Format** | `SECRET_FILE.<path in the project>=<s3 uri>` |
-| **Required** | ⚠️ One line per file, none is fine |
+|              |                                                                    |
+| :----------- | :----------------------------------------------------------------- |
+| **Example**  | `SECRET_FILE.android/key.properties=s3://my-bucket/key.properties` |
+| **Format**   | `SECRET_FILE.<path in the project>=<s3 uri>`                       |
+| **Required** | ⚠️ One line per file, none is fine                                 |
 
 **What it is** — a map. The key is where the file lands in the checked out project,
 the value is where it comes from in the bucket.
@@ -407,7 +409,7 @@ SECRET_FILE.  android/key.properties  =  s3://my-bucket/key.properties
 ```
 
 Destination paths are relative to the project root, and missing directories are
-created. The prefix is stripped, so whatever follows it *is* the path.
+created. The prefix is stripped, so whatever follows it _is_ the path.
 
 > [!NOTE]
 > The `s3://` scheme is how the aws CLI addresses a bucket, on every provider. It
@@ -428,12 +430,61 @@ project layout still decides where files land.
 
 ---
 
+## 🔑 16. `ASC_KEY_ID`
+
+|              |                                                      |
+| :----------- | :--------------------------------------------------- |
+| **Example**  | `2X9R4HXF34`                                         |
+| **Format**   | The Key ID from App Store Connect                    |
+| **Required** | ⚠️ Only for an iOS build with `UPLOAD_TO_TESTFLIGHT` |
+
+**What it is** — the short id of the App Store Connect API key that uploads the
+build. Not a secret, and it is also the middle of the `.p8` filename.
+
+```properties
+ASC_KEY_ID=2X9R4HXF34
+SECRET_FILE.private_keys/AuthKey.p8=s3://my-bucket/AuthKey.p8
+```
+
+**Why it exists** — `xcrun altool` names the key on the command line and reads the
+matching file from `private_keys/` in the project root. The value here has to be the
+same id in both places, so the upload stage builds the path from it and fails early
+when the file is missing.
+
+> [!IMPORTANT]
+> The `.p8` is the secret and travels as a `SECRET_FILE.*` entry like every other
+> credential file. Apple fixes its name as `AuthKey_<Key ID>.p8` — rename it and
+> `altool` will not find it.
+
+---
+
+## 🆔 17. `ASC_ISSUER_ID`
+
+|              |                                                      |
+| :----------- | :--------------------------------------------------- |
+| **Example**  | `69a6de7e-1234-4c5b-8f21-9a0bcdef1234`               |
+| **Format**   | The Issuer ID from App Store Connect                 |
+| **Required** | ⚠️ Only for an iOS build with `UPLOAD_TO_TESTFLIGHT` |
+
+**What it is** — the id of the App Store Connect account the key was created in. It
+sits at the top of **Users and Access → Integrations → App Store Connect API**.
+
+```properties
+ASC_ISSUER_ID=69a6de7e-1234-4c5b-8f21-9a0bcdef1234
+```
+
+**Why it exists** — Apple authenticates the upload with all three pieces: the Key ID,
+the Issuer ID and the `.p8`. The Issuer ID cannot be read off the file, so it has to
+be written down here.
+
+---
+
 ## ➕ Adding a variable
 
-| Step | Action |
-| :-: | :----- |
-| 1 | Add a `KEY=VALUE` line to `pipeline.properties` |
-| 2 | Document it here |
+| Step | Action                                          |
+| :--: | :---------------------------------------------- |
+|  1   | Add a `KEY=VALUE` line to `pipeline.properties` |
+|  2   | Document it here                                |
 
 > [!TIP]
 > No `Jenkinsfile` change is needed — the agent reads the file fresh on every
