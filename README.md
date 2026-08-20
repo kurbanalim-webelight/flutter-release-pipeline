@@ -30,6 +30,8 @@ and makes its values available to the rest of the pipeline.
 | `BUILD_RUNNER` | `Flutter` for a normal build, `Shorebird` for a code push release |
 | `BUILD_VERSION` | Present, and matches `MAJOR.MINOR.PATCH` |
 | `APP_BUILD_NUMBER` | Present, digits only, and `≥ 1` |
+| `SET_RELEASE_NAME` | Android only. Ticked means `RELEASE_NAME` is present and `≤ 50` characters |
+| `SET_RELEASE_NOTES` | Android only. Ticked means `RELEASE_NOTES` is present and `≤ 500` characters |
 
 Names the run so the build history is readable:
 
@@ -293,9 +295,30 @@ The Android path:
 | # | Action |
 | :-: | :----- |
 | 1 | If the fastlane CLI is absent, install it with Homebrew |
-| 2 | Locate the `.aab` under `build/app/outputs/bundle`, fail if there is none |
-| 3 | Fail if `private_keys/play-store.json` did not download |
-| 4 | `fastlane supply --track internal --release_status completed` |
+| 2 | Write the release notes file, if `SET_RELEASE_NOTES` is ticked |
+| 3 | Locate the `.aab` under `build/app/outputs/bundle`, fail if there is none |
+| 4 | Fail if `private_keys/play-store.json` did not download |
+| 5 | `fastlane supply --track internal --release_status completed` |
+
+### Naming the release and telling testers what changed
+
+Both are off by default and each has its own checkbox, so a normal run needs neither.
+
+| Ticked | Field | What the pipeline does |
+| :----- | :---- | :--------------------- |
+| `SET_RELEASE_NAME` | `RELEASE_NAME` | Passes it as `--version_name`. Unticked sends `VERSION+BUILD`, e.g. `1.0.5+13` |
+| `SET_RELEASE_NOTES` | `RELEASE_NOTES` | Writes the text to `metadata/android/en-US/changelogs/<APP_BUILD_NUMBER>.txt` and points `--metadata_path` at it. Unticked passes `--skip_upload_changelogs` |
+
+A ticked box with an empty or over-long field fails in
+[step 1](#-1-validate--load-configuration), before anything is built.
+
+> [!NOTE]
+> `supply` has no release-notes argument — the file path *is* the interface, which is
+> why the version code has to be in the filename. Notes go up in `en-US` only.
+
+> [!NOTE]
+> Release notes are the one piece of listing text CI writes. Store listing, images
+> and screenshots stay skipped, so a run can never overwrite them.
 
 ```text
 📤  Uploading build/app/outputs/bundle/prodRelease/app-prod-release.aab (52M) to com.chinmayamission.app

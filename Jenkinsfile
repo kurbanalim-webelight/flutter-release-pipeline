@@ -43,6 +43,27 @@ pipeline {
             trim: true,
             description: 'Positive integer, e.g. 1, 10, 32 (required)'
         )
+        booleanParam(
+            name: 'SET_RELEASE_NAME',
+            defaultValue: false,
+            description: 'Android only. Tick to name the Play release yourself'
+        )
+        string(
+            name: 'RELEASE_NAME',
+            defaultValue: '',
+            trim: true,
+            description: 'Only read when SET_RELEASE_NAME is ticked. Max 50 characters'
+        )
+        booleanParam(
+            name: 'SET_RELEASE_NOTES',
+            defaultValue: false,
+            description: 'Android only. Tick to send release notes to internal testers'
+        )
+        text(
+            name: 'RELEASE_NOTES',
+            defaultValue: '',
+            description: 'Only read when SET_RELEASE_NOTES is ticked. Max 500 characters'
+        )
     }
 
     stages {
@@ -150,6 +171,30 @@ pipeline {
                                   'SECRET_FILE.private_keys/play-store.json=<s3 uri> to ' +
                                   env.CONFIG_FILE + '.'
                         }
+
+                        // Only what was ticked is checked, against Play's own limits, so a
+                        // bad value fails now instead of after the build, at the upload.
+                        if (params.SET_RELEASE_NAME) {
+                            if (!params.RELEASE_NAME) {
+                                error 'RELEASE_NAME is required when SET_RELEASE_NAME is ticked.'
+                            }
+                            if (params.RELEASE_NAME.length() > 50) {
+                                error "RELEASE_NAME must be 50 characters or fewer, got ${params.RELEASE_NAME.length()}."
+                            }
+                        }
+
+                        if (params.SET_RELEASE_NOTES) {
+                            String notes = params.RELEASE_NOTES.trim()
+                            if (!notes) {
+                                error 'RELEASE_NOTES is required when SET_RELEASE_NOTES is ticked.'
+                            }
+                            if (notes.length() > 500) {
+                                error "RELEASE_NOTES must be 500 characters or fewer, got ${notes.length()}."
+                            }
+                        }
+
+                        env.PLAY_RELEASE_NAME = params.SET_RELEASE_NAME ? params.RELEASE_NAME :
+                            "${params.BUILD_VERSION}+${params.APP_BUILD_NUMBER}"
                     }
 
                     if (projectConfig.any { String key, String value -> key.startsWith('SECRET_FILE.') }) {
@@ -191,6 +236,9 @@ pipeline {
                         echo "🚀  TestFlight: key ${env.ASC_KEY_ID}"
                     } else {
                         echo "🚀  Play:       ${env.ANDROID_PACKAGE_NAME} -> internal track"
+                        echo "🏷️   Release:    ${env.PLAY_RELEASE_NAME}" +
+                             (params.SET_RELEASE_NAME ? '' : '  (default)')
+                        echo "📝  Notes:      ${params.SET_RELEASE_NOTES ? params.RELEASE_NOTES.trim().length() + ' characters' : 'none'}"
                     }
 
                     if (params.BUILD_RUNNER == 'Shorebird') {
@@ -676,6 +724,19 @@ void uploadToTestFlight() {
 
 void uploadToPlay() {
     ensureTool('fastlane', 'fastlane')
+
+    // supply has no release-notes flag: it reads them from
+    // <metadata path>/<locale>/changelogs/<version code>.txt. writeFile keeps the text
+    // out of the shell, so quotes and newlines in a note cannot break the command.
+    if (params.SET_RELEASE_NOTES) {
+        writeFile file: "metadata/android/en-US/changelogs/${params.APP_BUILD_NUMBER}.txt",
+                  text: params.RELEASE_NOTES.trim()
+        env.PLAY_NOTES_ARGS = '--metadata_path metadata/android'
+    } else {
+        env.PLAY_NOTES_ARGS = '--skip_upload_changelogs'
+        echo '📭  SET_RELEASE_NOTES is off - the release goes up without notes.'
+    }
+
     sh '''
         set -eu
 
@@ -706,10 +767,11 @@ void uploadToPlay() {
             --json_key "$PLAY_KEY_FILE" \
             --track internal \
             --release_status completed \
+            --version_name "$PLAY_RELEASE_NAME" \
             --skip_upload_metadata \
             --skip_upload_images \
             --skip_upload_screenshots \
-            --skip_upload_changelogs
+            $PLAY_NOTES_ARGS
 
         echo "✅  Uploaded to internal testing - Google processes the build before testers see it"
     '''
