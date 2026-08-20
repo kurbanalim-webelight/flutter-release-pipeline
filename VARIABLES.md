@@ -27,8 +27,8 @@ project different.
 | 13  | [`S3_REGION`](#-13-s3_region)                                           |   ⚠️ With secret files    | Which region the bucket is in                       |
 | 14  | [`S3_CREDENTIALS_ID`](#-14-s3_credentials_id)                           |   ⚠️ With secret files    | Where the storage keys are kept                     |
 | 15  | [`SECRET_FILE.*`](#-15-secret_file)                                     |        ⚠️ Per file        | Which file goes where in the project                |
-| 16  | [`ASC_KEY_ID`](#-16-asc_key_id)                                         | ⚠️ TestFlight upload only | Which App Store Connect API key signs the upload    |
-| 17  | [`ASC_ISSUER_ID`](#-17-asc_issuer_id)                                   | ⚠️ TestFlight upload only | Which App Store Connect account that key belongs to |
+| 16  | [`ASC_KEY_ID`](#-16-asc_key_id)                                         | ⚠️ iOS builds only        | Which App Store Connect API key signs the upload    |
+| 17  | [`ASC_ISSUER_ID`](#-17-asc_issuer_id)                                   | ⚠️ iOS builds only        | Which App Store Connect account that key belongs to |
 
 ---
 
@@ -436,7 +436,7 @@ project layout still decides where files land.
 | :----------- | :--------------------------------------------------- |
 | **Example**  | `2X9R4HXF34`                                         |
 | **Format**   | The Key ID from App Store Connect                    |
-| **Required** | ⚠️ Only for an iOS build with `UPLOAD_TO_TESTFLIGHT` |
+| **Required** | ⚠️ Only for an iOS build                            |
 
 **What it is** — the short id of the App Store Connect API key that uploads the
 build. Not a secret, and it is also the middle of the `.p8` filename.
@@ -464,7 +464,7 @@ when the file is missing.
 | :----------- | :--------------------------------------------------- |
 | **Example**  | `69a6de7e-1234-4c5b-8f21-9a0bcdef1234`               |
 | **Format**   | The Issuer ID from App Store Connect                 |
-| **Required** | ⚠️ Only for an iOS build with `UPLOAD_TO_TESTFLIGHT` |
+| **Required** | ⚠️ Only for an iOS build                            |
 
 **What it is** — the id of the App Store Connect account the key was created in. It
 sits at the top of **Users and Access → Integrations → App Store Connect API**.

@@ -116,6 +116,24 @@ pipeline {
                     }
                     String credentialsId = projectConfig.get('GIT_CREDENTIALS_ID')
 
+                    if (params.PLATFORM == 'iOS') {
+                        List<String> missingAsc = ['ASC_KEY_ID', 'ASC_ISSUER_ID'].findAll { String key ->
+                            !projectConfig.get(key)
+                        }
+                        if (missingAsc) {
+                            error "Required in ${env.CONFIG_FILE} for an iOS build:\n  - " +
+                                  missingAsc.join('\n  - ')
+                        }
+                        env.ASC_KEY_ID    = projectConfig.get('ASC_KEY_ID')
+                        env.ASC_ISSUER_ID = projectConfig.get('ASC_ISSUER_ID')
+                        env.ASC_KEY_FILE  = "private_keys/AuthKey_${projectConfig.get('ASC_KEY_ID')}.p8"
+
+                        if (!projectConfig.get('SECRET_FILE.private_keys/AuthKey.p8')) {
+                            error 'The TestFlight upload needs the App Store Connect key. Add ' +
+                                  'SECRET_FILE.private_keys/AuthKey.p8=<s3 uri> to ' + env.CONFIG_FILE + '.'
+                        }
+                    }
+
                     if (projectConfig.any { String key, String value -> key.startsWith('SECRET_FILE.') }) {
                         List<String> missingStorage =
                             ['S3_ENDPOINT', 'S3_REGION', 'S3_CREDENTIALS_ID'].findAll { String key ->
@@ -151,6 +169,9 @@ pipeline {
                     echo "🐦  Flutter:    ${env.FLUTTER_VERSION}"
                     echo "🔐  Infisical:  ${env.INFISICAL_ENV} @ ${env.INFISICAL_API_URL}"
                     echo "⚙️   Settings:   ${projectConfig.size()} loaded from ${env.CONFIG_FILE}"
+                    if (params.PLATFORM == 'iOS') {
+                        echo "🚀  TestFlight: key ${env.ASC_KEY_ID}"
+                    }
 
                     if (params.BUILD_RUNNER == 'Shorebird') {
                         precheckShorebird()
@@ -249,6 +270,19 @@ pipeline {
                     } else {
                         buildAndroid()
                     }
+                }
+            }
+        }
+
+        stage('Upload to TestFlight') {
+            when {
+                expression { params.PLATFORM == 'iOS' }
+            }
+            steps {
+                script {
+                    section('🚀  Upload to TestFlight')
+
+                    uploadToTestFlight()
                 }
             }
         }
@@ -580,6 +614,39 @@ void shorebirdReleaseIOS() {
     '''
 
     reportIpa()
+}
+
+// iOS only for now. Android gets its own upload stage when Play publishing lands.
+void uploadToTestFlight() {
+    sh '''
+        set -eu
+
+        IPA=$(find build/ios/ipa -name "*.ipa" -print -quit 2>/dev/null || true)
+
+        if [ -z "$IPA" ]; then
+            echo "❌  No .ipa found under build/ios/ipa" >&2
+            exit 1
+        fi
+
+        # The key travels under a generic name so the storage object never has to be
+        # renamed when the key rotates. altool only reads AuthKey_<key id>.p8, from
+        # private_keys/ next to the working directory, so copy it into place.
+        if [ ! -s private_keys/AuthKey.p8 ]; then
+            echo "❌  private_keys/AuthKey.p8 is missing - the secret file did not download" >&2
+            exit 1
+        fi
+        cp private_keys/AuthKey.p8 "$ASC_KEY_FILE"
+
+        echo "📤  Uploading $IPA ($(du -h "$IPA" | cut -f1)) with key $ASC_KEY_ID"
+
+        xcrun altool --upload-app \
+            --type ios \
+            --file "$IPA" \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID"
+
+        echo "✅  Uploaded to TestFlight - Apple processes the build before it appears"
+    '''
 }
 
 void reportIpa() {
