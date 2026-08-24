@@ -6,58 +6,33 @@
 The `Jenkinsfile` is identical for every project. This file is what makes each
 project different.
 
----
-
-## 📖 At a glance
-
-|  #  | Variable                                                                |         Required          | In one line                                         |
-| :-: | :---------------------------------------------------------------------- | :-----------------------: | :-------------------------------------------------- |
-|  1  | [`FLUTTER_VERSION`](#-1-flutter_version)                                |         ✅ Always         | Which Flutter SDK builds the app                    |
-|  2  | [`GIT_PROTOCOL`](#-2-git_protocol)                                      |         ✅ Always         | How to reach GitLab                                 |
-|  3  | [`GIT_HOST`](#-3-git_host)                                              |         ✅ Always         | Which GitLab server                                 |
-|  4  | [`GIT_REPO_PATH`](#-4-git_repo_path)                                    |         ✅ Always         | Which project on that server                        |
-|  5  | [`GIT_BRANCH`](#-5-git_branch)                                          |         ✅ Always         | Which branch to clone                               |
-|  6  | [`GIT_CREDENTIALS_ID`](#-6-git_credentials_id)                          |         ✅ Always         | Where the git credential is kept                    |
-|  7  | [`INFISICAL_API_URL`](#-7-infisical_api_url)                            |         ✅ Always         | Which Infisical server                              |
-|  8  | [`INFISICAL_PROJECT_ID`](#-8-infisical_project_id)                      |         ✅ Always         | Which Infisical project                             |
-|  9  | [`INFISICAL_ENV`](#-9-infisical_env)                                    |         ✅ Always         | Which Infisical environment                         |
-| 10  | [`INFISICAL_TOKEN_CREDENTIALS_ID`](#-10-infisical_token_credentials_id) |         ✅ Always         | Where the Infisical token is kept                   |
-| 11  | [`SHOREBIRD_TOKEN_CREDENTIALS_ID`](#-11-shorebird_token_credentials_id) |     ⚠️ Shorebird only     | Where the Shorebird token is kept                   |
-| 12  | [`S3_ENDPOINT`](#-12-s3_endpoint)                                       |   ⚠️ With secret files    | Which storage service the files come from           |
-| 13  | [`S3_REGION`](#-13-s3_region)                                           |   ⚠️ With secret files    | Which region the bucket is in                       |
-| 14  | [`S3_CREDENTIALS_ID`](#-14-s3_credentials_id)                           |   ⚠️ With secret files    | Where the storage keys are kept                     |
-| 15  | [`SECRET_FILE.*`](#-15-secret_file)                                     |        ⚠️ Per file        | Which file goes where in the project                |
-| 16  | [`ASC_KEY_ID`](#-16-asc_key_id)                                         | ⚠️ iOS builds only        | Which App Store Connect API key signs the upload    |
-| 17  | [`ASC_ISSUER_ID`](#-17-asc_issuer_id)                                   | ⚠️ iOS builds only        | Which App Store Connect account that key belongs to |
-| 18  | [`ANDROID_PACKAGE_NAME`](#-18-android_package_name)                     | ⚠️ Android builds only    | Which Play listing the build is uploaded to         |
+The variables are split by **who fills them in**. The DevOps team owns the ones
+that describe the infrastructure — the same values across every project on the
+server. The developer owns the ones that describe the app itself.
 
 ---
 
-## 🎯 1. `FLUTTER_VERSION`
+## 🛠️ Section 1 — Provided by DevOps
 
-|              |                     |
-| :----------- | :------------------ |
-| **Example**  | `3.44.6`            |
-| **Format**   | `MAJOR.MINOR.PATCH` |
-| **Required** | ✅ Always           |
+> Infrastructure and credential settings. These are handed to you by DevOps and
+> are usually identical for every project on the same server. Do not invent them.
 
-**What it is** — the exact Flutter SDK version to build with.
-
-```properties
-FLUTTER_VERSION=3.44.6
-```
-
-**Why it exists** — a project is only reliable on the SDK it was written for. Put
-the version here and FVM installs that exact SDK on the agent, so the same commit
-produces the same build on any machine, today or in six months.
-
-> [!NOTE]
-> This value wins over a `.fvmrc` in the project repo. One file decides the
-> version, so there is never a second answer to argue with.
+|  #  | Variable                                                                |         Required          | In one line                               |
+| :-: | :---------------------------------------------------------------------- | :-----------------------: | :---------------------------------------- |
+|  1  | [`GIT_PROTOCOL`](#-1-git_protocol)                                      |         ✅ Always         | How to reach GitLab                       |
+|  2  | [`GIT_HOST`](#-2-git_host)                                              |         ✅ Always         | Which GitLab server                       |
+|  3  | [`GIT_CREDENTIALS_ID`](#-3-git_credentials_id)                          |         ✅ Always         | Where the git credential is kept          |
+|  4  | [`INFISICAL_API_URL`](#-4-infisical_api_url)                            |         ✅ Always         | Which Infisical server                    |
+|  5  | [`INFISICAL_PROJECT_ID`](#-5-infisical_project_id)                      |         ✅ Always         | Which Infisical project                   |
+|  6  | [`INFISICAL_ENV`](#-6-infisical_env)                                    |         ✅ Always         | Which Infisical environment               |
+|  7  | [`INFISICAL_TOKEN_CREDENTIALS_ID`](#-7-infisical_token_credentials_id)  |         ✅ Always         | Where the Infisical token is kept         |
+|  8  | [`S3_ENDPOINT`](#-8-s3_endpoint)                                        |   ⚠️ With secret files    | Which storage service the files come from |
+|  9  | [`S3_REGION`](#-9-s3_region)                                            |   ⚠️ With secret files    | Which region the bucket is in             |
+| 10  | [`S3_CREDENTIALS_ID`](#-10-s3_credentials_id)                           |   ⚠️ With secret files    | Where the storage keys are kept           |
 
 ---
 
-## 🔌 2. `GIT_PROTOCOL`
+## 🔌 1. `GIT_PROTOCOL`
 
 |              |                  |
 | :----------- | :--------------- |
@@ -88,7 +63,7 @@ through. One setting lets the same pipeline run in both places.
 
 ---
 
-## 🌐 3. `GIT_HOST`
+## 🌐 2. `GIT_HOST`
 
 |              |                                             |
 | :----------- | :------------------------------------------ |
@@ -108,50 +83,7 @@ instead of being spelled out again in every project.
 
 ---
 
-## 📁 4. `GIT_REPO_PATH`
-
-|              |                                                       |
-| :----------- | :---------------------------------------------------- |
-| **Example**  | `webelight/ccmt/chinmaya-mission-flutter`             |
-| **Format**   | Group and project, no leading slash, no `.git` suffix |
-| **Required** | ✅ Always                                             |
-
-**What it is** — which project to clone from that server.
-
-```properties
-GIT_REPO_PATH=webelight/ccmt/chinmaya-mission-flutter
-```
-
-**Why it exists** — this is the one part of the clone URL that changes per
-project. It is combined with `GIT_HOST` into an SSH URL:
-
-```text
-git@gitlab.webelight.co.in:webelight/ccmt/chinmaya-mission-flutter.git
-```
-
----
-
-## 🌿 5. `GIT_BRANCH`
-
-|              |               |
-| :----------- | :------------ |
-| **Example**  | `main`        |
-| **Format**   | A branch name |
-| **Required** | ✅ Always     |
-
-**What it is** — the branch to clone.
-
-```properties
-GIT_BRANCH=main
-```
-
-**Why it exists** — a clone needs a named ref to be repeatable. Stating the branch
-means two runs of the same configuration fetch the same thing, instead of
-depending on whatever the remote's default happens to be.
-
----
-
-## 🔑 6. `GIT_CREDENTIALS_ID`
+## 🔑 3. `GIT_CREDENTIALS_ID`
 
 |              |                         |
 | :----------- | :---------------------- |
@@ -184,7 +116,7 @@ it.
 
 ---
 
-## ☁️ 7. `INFISICAL_API_URL`
+## ☁️ 4. `INFISICAL_API_URL`
 
 |              |                             |
 | :----------- | :-------------------------- |
@@ -203,7 +135,7 @@ Keeping it here means the pipeline works against either without a code change.
 
 ---
 
-## 🆔 8. `INFISICAL_PROJECT_ID`
+## 🆔 5. `INFISICAL_PROJECT_ID`
 
 |              |                                             |
 | :----------- | :------------------------------------------ |
@@ -222,7 +154,7 @@ part, so it changes for every project using this pipeline.
 
 ---
 
-## 🏷️ 9. `INFISICAL_ENV`
+## 🏷️ 6. `INFISICAL_ENV`
 
 |              |                                                |
 | :----------- | :--------------------------------------------- |
@@ -241,7 +173,7 @@ This decides which set lands in `.env`.
 
 ---
 
-## 🎫 10. `INFISICAL_TOKEN_CREDENTIALS_ID`
+## 🎫 7. `INFISICAL_TOKEN_CREDENTIALS_ID`
 
 |              |                         |
 | :----------- | :---------------------- |
@@ -269,30 +201,7 @@ the environment rather than a command line, so it never reaches the build log.
 
 ---
 
-## 🐦 11. `SHOREBIRD_TOKEN_CREDENTIALS_ID`
-
-|              |                                              |
-| :----------- | :------------------------------------------- |
-| **Example**  | `shorebird-token`                            |
-| **Format**   | A Jenkins credential ID                      |
-| **Required** | ⚠️ Only when the build runner is `Shorebird` |
-
-**What it is** — the **name** of a Jenkins credential. Not the token.
-
-```properties
-SHOREBIRD_TOKEN_CREDENTIALS_ID=shorebird-token
-```
-
-**Why it exists** — Shorebird needs a token to publish a release. Same reasoning as
-above: the name lives here, the secret stays in Jenkins.
-
-> [!IMPORTANT]
-> A plain `Flutter` build never reads this. Projects that do not release through
-> Shorebird can leave the line out entirely.
-
----
-
-## 🪣 12. `S3_ENDPOINT`
+## 🪣 8. `S3_ENDPOINT`
 
 |              |                                              |
 | :----------- | :------------------------------------------- |
@@ -323,7 +232,7 @@ buckets between providers is a one-line change, with no `Jenkinsfile` edit.
 
 ---
 
-## 🌍 13. `S3_REGION`
+## 🌍 9. `S3_REGION`
 
 |              |                                              |
 | :----------- | :------------------------------------------- |
@@ -349,7 +258,7 @@ reject a wrong value, so it cannot be hardcoded.
 
 ---
 
-## 🗝️ 14. `S3_CREDENTIALS_ID`
+## 🗝️ 10. `S3_CREDENTIALS_ID`
 
 |              |                                              |
 | :----------- | :------------------------------------------- |
@@ -381,6 +290,114 @@ they never reach a command line or the build log.
 > [!WARNING]
 > Putting a raw access key here instead of a credential ID is rejected by the
 > pipeline, the same as for the other credential IDs.
+
+---
+
+## 👩‍💻 Section 2 — Provided by the developer
+
+> Everything that describes *this* app: which SDK builds it, which repository and
+> branch it comes from, which files it needs and where it ships to.
+
+|  #  | Variable                                                                |        Required        | In one line                                         |
+| :-: | :---------------------------------------------------------------------- | :--------------------: | :-------------------------------------------------- |
+| 11  | [`FLUTTER_VERSION`](#-11-flutter_version)                               |       ✅ Always        | Which Flutter SDK builds the app                    |
+| 12  | [`GIT_REPO_PATH`](#-12-git_repo_path)                                   |       ✅ Always        | Which project on that server                        |
+| 13  | [`GIT_BRANCH`](#-13-git_branch)                                         |       ✅ Always        | Which branch to clone                               |
+| 14  | [`SHOREBIRD_TOKEN_CREDENTIALS_ID`](#-14-shorebird_token_credentials_id) |   ⚠️ Shorebird only    | Where the Shorebird token is kept                   |
+| 15  | [`SECRET_FILE.*`](#-15-secret_file)                                     |      ⚠️ Per file       | Which file goes where in the project                |
+| 16  | [`ASC_KEY_ID`](#-16-asc_key_id)                                         | ⚠️ iOS builds only     | Which App Store Connect API key signs the upload    |
+| 17  | [`ASC_ISSUER_ID`](#-17-asc_issuer_id)                                   | ⚠️ iOS builds only     | Which App Store Connect account that key belongs to |
+| 18  | [`ANDROID_PACKAGE_NAME`](#-18-android_package_name)                     | ⚠️ Android builds only | Which Play listing the build is uploaded to         |
+
+---
+
+## 🎯 11. `FLUTTER_VERSION`
+
+|              |                     |
+| :----------- | :------------------ |
+| **Example**  | `3.44.6`            |
+| **Format**   | `MAJOR.MINOR.PATCH` |
+| **Required** | ✅ Always           |
+
+**What it is** — the exact Flutter SDK version to build with.
+
+```properties
+FLUTTER_VERSION=3.44.6
+```
+
+**Why it exists** — a project is only reliable on the SDK it was written for. Put
+the version here and FVM installs that exact SDK on the agent, so the same commit
+produces the same build on any machine, today or in six months.
+
+> [!NOTE]
+> This value wins over a `.fvmrc` in the project repo. One file decides the
+> version, so there is never a second answer to argue with.
+
+---
+
+## 📁 12. `GIT_REPO_PATH`
+
+|              |                                                       |
+| :----------- | :---------------------------------------------------- |
+| **Example**  | `webelight/ccmt/chinmaya-mission-flutter`             |
+| **Format**   | Group and project, no leading slash, no `.git` suffix |
+| **Required** | ✅ Always                                             |
+
+**What it is** — which project to clone from that server.
+
+```properties
+GIT_REPO_PATH=webelight/ccmt/chinmaya-mission-flutter
+```
+
+**Why it exists** — this is the one part of the clone URL that changes per
+project. It is combined with `GIT_HOST` into an SSH URL:
+
+```text
+git@gitlab.webelight.co.in:webelight/ccmt/chinmaya-mission-flutter.git
+```
+
+---
+
+## 🌿 13. `GIT_BRANCH`
+
+|              |               |
+| :----------- | :------------ |
+| **Example**  | `main`        |
+| **Format**   | A branch name |
+| **Required** | ✅ Always     |
+
+**What it is** — the branch to clone.
+
+```properties
+GIT_BRANCH=main
+```
+
+**Why it exists** — a clone needs a named ref to be repeatable. Stating the branch
+means two runs of the same configuration fetch the same thing, instead of
+depending on whatever the remote's default happens to be.
+
+---
+
+## 🐦 14. `SHOREBIRD_TOKEN_CREDENTIALS_ID`
+
+|              |                                              |
+| :----------- | :------------------------------------------- |
+| **Example**  | `shorebird-token`                            |
+| **Format**   | A Jenkins credential ID                      |
+| **Required** | ⚠️ Only when the build runner is `Shorebird` |
+
+**What it is** — the **name** of a Jenkins credential. Not the token.
+
+```properties
+SHOREBIRD_TOKEN_CREDENTIALS_ID=shorebird-token
+```
+
+**Why it exists** — Shorebird needs a token to publish a release. Same reasoning as
+above: the name lives here, the secret stays in Jenkins.
+
+> [!IMPORTANT]
+> A plain `Flutter` build never reads this. Projects that do not release through
+> Shorebird can leave the line out entirely.
 
 ---
 
@@ -518,7 +535,7 @@ against Play's API instead of in the first ten seconds.
 | Step | Action                                          |
 | :--: | :---------------------------------------------- |
 |  1   | Add a `KEY=VALUE` line to `pipeline.properties` |
-|  2   | Document it here                                |
+|  2   | Document it here, under the section that owns it |
 
 > [!TIP]
 > No `Jenkinsfile` change is needed — the agent reads the file fresh on every
