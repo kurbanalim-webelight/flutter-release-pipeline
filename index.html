@@ -47,7 +47,7 @@
   --rule-dark:#315047;
 
   /* spacing — multiples of 8, nothing else */
-  --s1:8px;   --s2:16px;  --s3:24px;  --s4:32px;
+  --s0:4px;   --s1:8px;   --s2:16px;  --s3:24px;  --s4:32px;
   --s5:40px;  --s6:48px;  --s7:64px;  --s8:80px;  --s9:96px;
 
   /* type — one hand-picked scale */
@@ -170,8 +170,42 @@ h1,h2,h3{
 .row .arrow{color:var(--teal);font-weight:600;}
 .row b{color:var(--ink-1);font-weight:600;min-width:var(--s8);}
 
+/* ── variable groups ────────────────────────────────────────────── */
+.hd-row{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);margin-bottom:var(--s2);}
+.hd-row .card-hd{margin-bottom:0;}
+.badge{
+  font-size:var(--f1);font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  padding:var(--s0) var(--s2);border-radius:var(--rp);flex:none;
+  background:rgba(66,132,117,.12);color:var(--teal);
+}
+.badge.cond{background:rgba(137,215,183,.34);color:var(--forest);}
+
+.var{display:flex;align-items:baseline;gap:var(--s2);padding:var(--s1) 0;}
+.var+.var{border-top:1px solid var(--rule);}
+.var code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:var(--f2);font-weight:600;color:var(--ink-1);letter-spacing:-.01em;
+}
+.var .ex{
+  margin-left:auto;text-align:right;font-size:var(--f1);color:var(--ink-3);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:22ch;
+}
+.card .note{font-size:var(--f2);line-height:1.5;color:var(--ink-2);margin-top:var(--s2);}
+.card.fill-mint .note{color:var(--forest);opacity:.78;}
+.card .note code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--f1);color:var(--teal);}
+.card.fill-mint .note code{color:var(--forest);}
+
+.groups{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s3);}
+.group{display:grid;grid-template-columns:var(--s4) 1fr;column-gap:var(--s2);row-gap:0;align-content:start;}
+.group h3{grid-column:2;align-self:center;font-size:var(--f3);}
+.group p{grid-column:2;font-size:var(--f2);line-height:1.5;color:var(--ink-2);margin-top:var(--s0);}
+.card.fill-mint .group p,.card.fill-mint h3{color:var(--forest);}
+.card.fill-mint .group p{opacity:.78;}
+
 /* ── grids ──────────────────────────────────────────────────────── */
 .two{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3);}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s3);align-items:stretch;}
 .hero{display:grid;grid-template-columns:1.25fr 1fr;gap:var(--s8);align-items:center;}
 .split{display:grid;grid-template-columns:1.5fr 1fr;gap:var(--s8);align-items:start;}
 .stack{display:flex;flex-direction:column;gap:var(--s3);}
@@ -388,6 +422,195 @@ h1,h2,h3{
     </div>
 
     <div class="foot"><b>Flutter Release Pipeline</b><span>The solution &nbsp;·&nbsp; 03</span></div>
+  </div>
+</section>
+
+<!-- ══════════ 4 · CONFIGURATION ══════════ -->
+<section data-transition="slide">
+  <div class="shape"></div>
+  <div class="frame">
+    <div class="fill">
+      <div class="kicker">Configuration</div>
+      <h2>Eighteen settings, seven groups</h2>
+      <div class="accent"></div>
+      <p class="lede">
+        The Jenkinsfile never changes. Everything that makes one project
+        different from another lives in <strong>pipeline.properties</strong>.
+      </p>
+
+      <div class="groups">
+        <div class="card group fragment fade-up">
+          <span class="chip">5</span>
+          <h3>Git</h3>
+          <p>Which repository, which branch, and how to reach it.</p>
+        </div>
+        <div class="card group fragment fade-up">
+          <span class="chip">1</span>
+          <h3>Flutter</h3>
+          <p>The exact SDK version the app is built with.</p>
+        </div>
+        <div class="card group fragment fade-up">
+          <span class="chip">4</span>
+          <h3>Infisical</h3>
+          <p>Where the environment values in .env come from.</p>
+        </div>
+        <div class="card group fragment fade-up">
+          <span class="chip">3</span>
+          <h3>Object storage</h3>
+          <p>Where the files that cannot be committed come from.</p>
+        </div>
+        <div class="card group fragment fade-up">
+          <span class="chip">1</span>
+          <h3>Shorebird</h3>
+          <p>The token that publishes a code push release.</p>
+        </div>
+        <div class="card group fragment fade-up">
+          <span class="chip">1</span>
+          <h3>Google Play</h3>
+          <p>Which listing the app bundle is uploaded to.</p>
+        </div>
+        <div class="card group fragment fade-up">
+          <span class="chip">2</span>
+          <h3>App Store Connect</h3>
+          <p>Which key signs the upload to TestFlight.</p>
+        </div>
+        <div class="card fill-mint group fragment fade-up">
+          <span class="chip on">!</span>
+          <h3>Never a secret</h3>
+          <p>Every credential is a Jenkins ID. A raw token is rejected.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot"><b>Flutter Release Pipeline</b><span>Configuration &nbsp;·&nbsp; 04</span></div>
+  </div>
+</section>
+
+<!-- ══════════ 5 · SOURCE & SDK ══════════ -->
+<section data-transition="slide">
+  <div class="shape"></div>
+  <div class="frame">
+    <div class="fill">
+      <div class="kicker">Group 1 &amp; 2</div>
+      <h2>Where the code comes from</h2>
+      <div class="accent"></div>
+
+      <div class="three">
+        <div class="card fragment fade-up">
+          <div class="hd-row"><div class="card-hd">Git</div><span class="badge">Always</span></div>
+          <div class="var"><code>GIT_PROTOCOL</code><span class="ex">https</span></div>
+          <div class="var"><code>GIT_HOST</code><span class="ex">gitlab.webelight.co.in</span></div>
+          <div class="var"><code>GIT_REPO_PATH</code><span class="ex">webelight/ccmt/…</span></div>
+          <div class="var"><code>GIT_BRANCH</code><span class="ex">main</span></div>
+          <div class="var"><code>GIT_CREDENTIALS_ID</code><span class="ex">gitlab-token</span></div>
+        </div>
+
+        <div class="card fragment fade-up">
+          <div class="hd-row"><div class="card-hd">The clone URL</div></div>
+          <p class="note">Host and path are kept apart so the URL is assembled in
+             one place, and the protocol decides its shape.</p>
+          <p class="note"><code>ssh</code> &nbsp;git@HOST:PATH.git</p>
+          <p class="note"><code>https</code> &nbsp;https://HOST/PATH.git</p>
+          <p class="note">SSH needs port 22 open, so HTTPS is used from outside
+             the office network. The credential kind has to match.</p>
+        </div>
+
+        <div class="card fragment fade-up">
+          <div class="hd-row"><div class="card-hd">Flutter</div><span class="badge">Always</span></div>
+          <div class="var"><code>FLUTTER_VERSION</code><span class="ex">3.44.6</span></div>
+          <p class="note">FVM installs this exact SDK on the agent and the build
+             fails if the active version does not match, so the same commit
+             produces the same build on any machine.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot"><b>Flutter Release Pipeline</b><span>Source &amp; SDK &nbsp;·&nbsp; 05</span></div>
+  </div>
+</section>
+
+<!-- ══════════ 6 · SECRETS ══════════ -->
+<section data-transition="slide">
+  <div class="shape"></div>
+  <div class="frame">
+    <div class="fill">
+      <div class="kicker">Group 3 &amp; 4</div>
+      <h2>Where the secrets come from</h2>
+      <div class="accent"></div>
+
+      <div class="three">
+        <div class="card fragment fade-up">
+          <div class="hd-row"><div class="card-hd">Infisical</div><span class="badge">Always</span></div>
+          <div class="var"><code>INFISICAL_API_URL</code><span class="ex">app.infisical.com</span></div>
+          <div class="var"><code>INFISICAL_PROJECT_ID</code><span class="ex">ebac93cc-…</span></div>
+          <div class="var"><code>INFISICAL_ENV</code><span class="ex">prod</span></div>
+          <div class="var"><code>INFISICAL_TOKEN_CREDENTIALS_ID</code><span class="ex">infisical-token</span></div>
+          <p class="note">Exported to <code>.env</code> in the project root.</p>
+        </div>
+
+        <div class="card fragment fade-up">
+          <div class="hd-row"><div class="card-hd">Object storage</div><span class="badge cond">With files</span></div>
+          <div class="var"><code>S3_ENDPOINT</code><span class="ex">…r2.cloudflarestorage.com</span></div>
+          <div class="var"><code>S3_REGION</code><span class="ex">auto</span></div>
+          <div class="var"><code>S3_CREDENTIALS_ID</code><span class="ex">r2-credentials</span></div>
+          <p class="note">Any S3-compatible service works — R2, MinIO, B2,
+             Spaces. Only the endpoint changes.</p>
+        </div>
+
+        <div class="card fragment fade-up">
+          <div class="hd-row"><div class="card-hd">Secret files</div><span class="badge cond">Per file</span></div>
+          <p class="note">One line per file. The key is where it lands in the
+             project, the value is where it comes from.</p>
+          <p class="note"><code>SECRET_FILE.&lt;path&gt;=s3://&lt;bucket&gt;/&lt;object&gt;</code></p>
+          <p class="note">Keystore, google-services.json, the iOS plist, the Play
+             service account and the Apple key all travel this way. A project
+             with no such line skips the download.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot"><b>Flutter Release Pipeline</b><span>Secrets &nbsp;·&nbsp; 06</span></div>
+  </div>
+</section>
+
+<!-- ══════════ 7 · SHIPPING ══════════ -->
+<section data-transition="slide">
+  <div class="shape"></div>
+  <div class="frame">
+    <div class="fill">
+      <div class="kicker">Group 5, 6 &amp; 7</div>
+      <h2>Where the build goes</h2>
+      <div class="accent"></div>
+
+      <div class="three">
+        <div class="card fragment fade-up">
+          <div class="hd-row"><div class="card-hd">Google Play</div><span class="badge cond">Android</span></div>
+          <div class="var"><code>ANDROID_PACKAGE_NAME</code><span class="ex">com.chinmayamission.app</span></div>
+          <div class="var"><code>SECRET_FILE.…/play-store.json</code><span class="ex">service account</span></div>
+          <p class="note">supply addresses a listing by package name, so it has
+             to match the application id exactly. Checked before the build.</p>
+        </div>
+
+        <div class="card fragment fade-up">
+          <div class="hd-row"><div class="card-hd">App Store Connect</div><span class="badge cond">iOS</span></div>
+          <div class="var"><code>ASC_KEY_ID</code><span class="ex">7UB3848ZB4</span></div>
+          <div class="var"><code>ASC_ISSUER_ID</code><span class="ex">69a6de93-…</span></div>
+          <div class="var"><code>SECRET_FILE.…/AuthKey.p8</code><span class="ex">private key</span></div>
+          <p class="note">Apple authenticates with all three. The issuer id
+             cannot be read off the key file.</p>
+        </div>
+
+        <div class="card fragment fade-up">
+          <div class="hd-row"><div class="card-hd">Shorebird</div><span class="badge cond">Code push</span></div>
+          <div class="var"><code>SHOREBIRD_TOKEN_CREDENTIALS_ID</code><span class="ex">shorebird-token</span></div>
+          <p class="note">Only read when the build runner is Shorebird. The token
+             is proved non-empty in the first stage, so a bad one fails in
+             seconds instead of after the whole build.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot"><b>Flutter Release Pipeline</b><span>Shipping &nbsp;·&nbsp; 07</span></div>
   </div>
 </section>
 
