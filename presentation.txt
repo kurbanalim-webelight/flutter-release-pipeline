@@ -1,107 +1,140 @@
-FLUTTER RELEASE PIPELINE - PRESENTATION CONTENT
-===============================================
+FLUTTER RELEASE PIPELINE - SLIDE CONTENT
+========================================
 
 
-1. WHY THIS PIPELINE, AND WHAT IT SOLVES
-----------------------------------------
+============================================================
+SLIDE 1 - INTRODUCTION
+============================================================
 
-The problem: a release was a person, not a process.
-
-Shipping a build meant one developer, on one laptop, running a long list of
-steps by hand and remembering all of them in the right order. Every release
-depended on that machine being set up correctly and on nobody skipping a step.
+  Flutter Release Pipeline
+  Code to Play Store and TestFlight, with one button.
 
 
-The problems we were facing
----------------------------
+  What it is
 
-  Problem 1 - Developer has to do everything by hand
-
-  Every time we want to give a build, one developer has to sit and do the full
-  work manually. He has to take the latest code, run the build command, wait for
-  it to finish, and then upload that build himself. For Android he has to open
-  the Play Console and upload the .aab file. For iOS he has to open Transporter
-  and upload the .ipa file. Then again he has to type the version name and paste
-  the release notes.
-
-  This is 30 to 40 minutes of the developer's time, every single time. And it is
-  the same boring steps again and again. Also only that one person knows the
-  full process, so if he is on leave, nobody else can give the build.
+  A Jenkins pipeline that takes our Flutter app from the Git repository
+  all the way to the testers, without anybody doing the steps by hand.
+  The developer only opens Jenkins, selects the platform, types the
+  version and build number, and presses Build. Everything after that -
+  cloning the code, bringing the secret files, generating code, building
+  the release, and uploading it - is done by the pipeline.
 
 
-  Problem 2 - Mistakes are found only at the end
+  Where it runs
 
-  Many small things can go wrong. The .env file is missing or has the wrong
-  environment. The Flutter version on the laptop is not the same version the
-  project needs. The keystore file or google-services.json is old. The build
-  number is already used in Play Console. Someone forgot to run the code
-  generation step.
-
-  The bad part is not the mistake. The bad part is WHEN we come to know about
-  it. The build takes 30 to 40 minutes to compile, and only after that, at the
-  upload step, we get the error. So we correct one small thing and again wait
-  40 minutes. Sometimes this happens two, three times in one day.
+  On a dedicated Mac agent, so both Android and iOS builds come from the
+  same machine, with the same tools, every single time.
 
 
-  Problem 3 - The whole thing is slow
+  Why it matters
 
-  Because everything is manual and mistakes come late, one release easily takes
-  half a day. Testing team is waiting, client is waiting, and the developer is
-  only sitting and watching the build screen. He cannot do his actual work.
-
-  And if we need a small urgent fix, still we have to do the same full process
-  again from the beginning. There is no shortcut.
+  A release is no longer one person's manual work. It is a process that
+  anyone on the team can run, and it gives the same result every time.
 
 
-  Problem 4 - Uploading to the testing tracks is a separate manual job
+============================================================
+SLIDE 2 - PROBLEM
+============================================================
 
-  Even after the build is ready, the work is not over. Android build has to go
-  to the internal testing track in Play Console, and iOS build has to go to
-  TestFlight. Both are done by hand, in two different websites, with two
-  different login accounts.
-
-  If the developer forgets to upload, the testing team keeps waiting for a build
-  that is already ready but sitting on somebody's laptop. And each upload needs
-  the correct key and correct permission, which not everybody has.
+  Earlier, giving a build meant one developer doing everything manually
+  on his own laptop.
 
 
-What the pipeline does instead
-------------------------------
+  1. Everything was manual
 
-  * One button, two inputs
-    Pick platform and build runner, type the version and build number. Jenkins
-    does the rest - clone, SDK, secrets, dependencies, codegen, build, upload.
-
-  * The exact SDK, every time
-    FLUTTER_VERSION is pinned by FVM and then verified as an exact string
-    match. A mismatch fails the build instead of silently shipping.
-
-  * Secrets never touch a laptop or a log
-    Environment values come from Infisical. Files come from S3-compatible
-    storage. Every token lives in Jenkins Credentials and is passed through the
-    environment - never on a command line, never in git, never in the console
-    output. Only counts are logged, never names or values.
-
-  * Fails in seconds, not in an hour
-    Inputs, config keys, credential IDs, package name shape, release name and
-    notes limits, and the Shorebird token are all checked before anything is
-    cloned or compiled.
-
-  * Ships itself
-    Android goes to the Play internal testing track via fastlane supply. iOS
-    goes to TestFlight via xcrun altool. No manual upload step at all.
-
-  * Repeatable and readable
-    Every run is named - "#17 Android/Flutter 1.0.0+32" - so the build history
-    tells you what shipped, when, and from which commit.
+  He had to take the latest code, put the .env and the secret files in
+  the correct places, run the build command, wait for it to finish, and
+  then upload the file himself. For Android he opened the Play Console
+  and uploaded the .aab. For iOS he opened Transporter and uploaded the
+  .ipa. Then he typed the version name and release notes again by hand.
+  Same steps, every release. And only he knew the full process, so when
+  he was on leave, nobody else could give a build.
 
 
-The design decision that makes it reusable
-------------------------------------------
+  2. Mistakes were found only at the end
 
-The Jenkinsfile is IDENTICAL for every project. Everything project-specific
-lives in pipeline.properties - a plain KEY=VALUE file, split between the values
-DevOps owns (infrastructure, credentials) and the values the developer owns
-(the app itself).
+  Many small things could go wrong - the .env was missing or from the
+  wrong environment, the Flutter version on the laptop did not match the
+  project, the keystore or google-services.json was old, or the build
+  number was already used in Play Console. The problem was not the
+  mistake, it was when we came to know about it. The build took around
+  40 minutes, and the error appeared only at the last step. Fix one
+  small thing and wait another 40 minutes.
 
-Onboarding a new app is a new properties file, not a new pipeline.
+
+  3. The whole release was slow
+
+  Because everything was manual and the mistakes came late, one release
+  easily took half a day. The testing team was waiting, the client was
+  waiting, and the developer was just sitting and watching the build
+  screen instead of doing his actual work.
+
+
+  4. Uploading was a separate job of its own
+
+  Even after the build was ready, it had to be uploaded by hand to two
+  different places - Play Console internal testing for Android and
+  TestFlight for iOS. Two websites, two logins, two sets of keys. If the
+  developer forgot, a ready build simply stayed on his laptop while the
+  testers kept waiting.
+
+
+============================================================
+SLIDE 3 - SOLUTION
+============================================================
+
+  One pipeline that does all five steps, in the same order, every time.
+
+
+  Step 1 - Clone the repository
+
+  Jenkins clones the branch from GitLab using a credential stored inside
+  Jenkins, and prints the exact commit it is building. So we always know
+  what went into a build, and no old code from somebody's laptop can get
+  in.
+
+
+  Step 2 - Bring the secret files
+
+  The .env values are pulled from Infisical, and the files that cannot
+  be committed - the keystore, google-services.json,
+  GoogleService-Info.plist, the Play service account JSON and the Apple
+  .p8 - are downloaded from S3 storage. Each file lands at its exact
+  path in the project, and if any file comes down empty, the build stops
+  right there. No secret ever sits on a laptop or appears in the logs.
+
+
+  Step 3 - Generate the auto-generated code
+
+  All the *.g.dart files are git-ignored, so a fresh clone does not have
+  them and the app will not compile without this step. The pipeline runs
+  easy_localization and build_runner, and it runs them after the .env is
+  ready, because Envied reads that file. The order is fixed in the
+  pipeline, so nobody can forget it or do it in the wrong sequence.
+
+
+  Step 4 - Build with Flutter or Shorebird
+
+  The developer chooses the runner. Flutter gives a normal release build
+  (.aab or .ipa) and Shorebird gives a code push release. Both get the
+  same flavour, entrypoint, version and build number. The exact Flutter
+  SDK is installed and verified before the build starts, so the same
+  commit always produces the same build. If no artifact is produced, the
+  build is marked failed.
+
+
+  Step 5 - Upload automatically
+
+  Android goes to the Play internal testing track through fastlane
+  supply, and iOS goes to TestFlight through Apple's xcrun altool. The
+  release name and release notes can be sent from the same Jenkins
+  screen. There is nothing left to upload by hand.
+
+
+  And it works for any project
+
+  The Jenkinsfile is exactly the same for every project. Only the
+  pipeline.properties file changes - it holds the repository, the
+  Flutter version, the secret file list and the store details. Onboarding
+  a new app means writing one properties file, not building a new
+  pipeline.
