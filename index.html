@@ -204,6 +204,8 @@ h1,h2,h3{
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:22ch;
 }
 .card .note{font-size:var(--f2);line-height:1.5;color:var(--ink-2);margin-top:var(--s2);}
+.card h3+.note{margin-top:var(--s1);}
+.four{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s3);align-items:stretch;}
 .card.fill-mint .note{color:var(--forest);opacity:.78;}
 .card .note code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--f1);color:var(--teal);}
 .card.fill-mint .note code{color:var(--forest);}
@@ -263,11 +265,71 @@ h1,h2,h3{
   .hero,.split,.two,.meta,.stats{grid-template-columns:1fr;gap:var(--s3);}
 }
 
+/* ── emoji, treated as one icon set ─────────────────────────────── */
+i{font-style:normal;display:inline-block;margin-right:var(--s1);line-height:1;}
+.card-hd i{font-size:var(--f2);margin-right:var(--s0);vertical-align:-1px;}
+h2 i{font-size:.82em;margin-right:var(--s2);}
+h3 i{font-size:1em;margin-right:var(--s1);}
+
+/* ── motion ─────────────────────────────────────────────────────────
+   One easing and one duration for the whole deck. Everything keys off
+   section.present so it replays each time a slide is reached. */
+@keyframes rise{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
+@keyframes grow{from{transform:scaleX(0);}to{transform:scaleX(1);}}
+@keyframes drawY{from{transform:scaleY(0);}to{transform:scaleY(1);}}
+@keyframes ring{
+  0%{box-shadow:0 0 0 0 rgba(137,215,183,.55);}
+  70%{box-shadow:0 0 0 14px rgba(137,215,183,0);}
+  100%{box-shadow:0 0 0 0 rgba(137,215,183,0);}
+}
+@keyframes drift{0%,100%{transform:translate(0,0);}50%{transform:translate(-18px,-14px);}}
+
+.reveal section.present .kicker,
+.reveal section.present h1,
+.reveal section.present h2,
+.reveal section.present .section-no,
+.reveal section.present .lede,
+.reveal section.present .tags,
+.reveal section.present .hero > div > *,
+.reveal section.present .meta > div{
+  animation:rise .6s cubic-bezier(.2,.8,.2,1) both;
+}
+.reveal section.present .section-no{animation-delay:.02s;}
+.reveal section.present h1,
+.reveal section.present h2{animation-delay:.10s;}
+.reveal section.present .lede{animation-delay:.18s;}
+.reveal section.present .tags{animation-delay:.26s;}
+.reveal section.present .meta>div:nth-child(1){animation-delay:.24s;}
+.reveal section.present .meta>div:nth-child(2){animation-delay:.32s;}
+.reveal section.present .meta>div:nth-child(3){animation-delay:.40s;}
+
+/* the accent rule draws itself — the deck's repeating motif */
+.reveal section.present .accent{
+  transform-origin:left center;
+  animation:grow .55s cubic-bezier(.2,.8,.2,1) .14s both;
+}
+/* the stepper rail draws downward */
+.reveal section.present .steps::before{
+  transform-origin:top center;
+  animation:drawY .8s cubic-bezier(.2,.8,.2,1) .2s both;
+}
+/* rows of the pipeline card arrive in order */
+.reveal section.present .card .row{animation:rise .5s cubic-bezier(.2,.8,.2,1) both;}
+.reveal section.present .card .row:nth-child(2){animation-delay:.22s;}
+.reveal section.present .card .row:nth-child(3){animation-delay:.30s;}
+.reveal section.present .card .row:nth-child(4){animation-delay:.38s;}
+.reveal section.present .card .row:nth-child(5){animation-delay:.46s;}
+.reveal section.present .card .row:nth-child(6){animation-delay:.54s;}
+/* the destination step keeps pulsing */
+.reveal section.present .chip.on{animation:ring 2.4s ease-out 1s infinite;}
+/* the background shape drifts slowly */
+.shape{animation:drift 18s ease-in-out infinite;}
+
 /* ── reveal chrome ──────────────────────────────────────────────── */
 .reveal .progress{color:var(--teal);height:3px;}
 .reveal .slide-number{display:none;}
 .reveal .controls{color:var(--teal);}
-.reveal .fragment.fade-up{opacity:0;transform:translateY(8px);transition:all .3s ease;}
+.reveal .fragment.fade-up{opacity:0;transform:translateY(16px);transition:all .5s cubic-bezier(.2,.8,.2,1);}
 .reveal .fragment.fade-up.visible{opacity:1;transform:none;}
 </style>
 </head>
@@ -293,7 +355,7 @@ h1,h2,h3{
         </div>
 
         <div class="card">
-          <div class="card-hd">The pipeline</div>
+          <div class="card-hd"><i>🚀</i>The pipeline</div>
           <div class="row"><span class="chip">01</span><span class="lbl">Clone the repository</span></div>
           <div class="row"><span class="chip">02</span><span class="lbl">Bring the secret files</span></div>
           <div class="row"><span class="chip">03</span><span class="lbl">Generate the code</span></div>
@@ -319,7 +381,7 @@ h1,h2,h3{
   <div class="frame">
     <div class="fill">
       <span class="section-no">01</span>
-      <h2>The problem</h2>
+      <h2><i>⚠️</i>The problem</h2>
       <div class="accent"></div>
       <p class="lede">How a release used to happen, what went wrong every time, and what it cost the team.</p>
     </div>
@@ -342,34 +404,34 @@ h1,h2,h3{
       <div class="two">
         <div class="card problem fragment fade-up">
           <span class="chip">01</span>
-          <h3>Everything was manual</h3>
+          <h3><i>✋</i>Everything was manual</h3>
           <p>Take the code, place the environment and secret files, run the build,
              wait, then upload the artifact and retype the version.</p>
         </div>
         <div class="card problem fragment fade-up">
           <span class="chip">02</span>
-          <h3>Mistakes surfaced last</h3>
+          <h3><i>⏱️</i>Mistakes surfaced last</h3>
           <p>A wrong environment, a mismatched Flutter version or a used build
              number only appeared after a forty-minute build.</p>
         </div>
         <div class="card problem fragment fade-up">
           <span class="chip">03</span>
-          <h3>The release was slow</h3>
+          <h3><i>🐌</i>The release was slow</h3>
           <p>Half a day per release. The testing team waited, the client waited,
              and the developer watched a build screen.</p>
         </div>
         <div class="card problem fragment fade-up">
           <span class="chip">04</span>
-          <h3>Uploading was its own job</h3>
+          <h3><i>📤</i>Uploading was its own job</h3>
           <p>Play Console and TestFlight, by hand, two logins and two sets of
              keys. Forget it and a finished build waits.</p>
         </div>
       </div>
 
       <div class="stats fragment fade-up">
-        <div><div class="v">~4 hrs</div><div class="k">Developer time per release</div></div>
-        <div><div class="v">40 min</div><div class="k">To find out a build was wrong</div></div>
-        <div><div class="v">2</div><div class="k">Consoles to upload by hand</div></div>
+        <div><div class="v">~<span data-count="4">0</span> hrs</div><div class="k">Developer time per release</div></div>
+        <div><div class="v"><span data-count="40">0</span> min</div><div class="k">To find out a build was wrong</div></div>
+        <div><div class="v"><span data-count="2">0</span></div><div class="k">Consoles to upload by hand</div></div>
       </div>
     </div>
 
@@ -383,7 +445,7 @@ h1,h2,h3{
   <div class="frame">
     <div class="fill">
       <span class="section-no">02</span>
-      <h2>The solution</h2>
+      <h2><i>⚙️</i>The solution</h2>
       <div class="accent"></div>
       <p class="lede">The five stages the pipeline runs, in the same order, on every build.</p>
     </div>
@@ -403,31 +465,31 @@ h1,h2,h3{
         <div class="steps">
           <div class="step fragment fade-up">
             <span class="chip">01</span>
-            <h3>Clone the repository</h3>
+            <h3><i>📥</i>Clone the repository</h3>
             <p>Clones the branch from GitLab with a stored credential and prints
                the exact commit.</p>
           </div>
           <div class="step fragment fade-up">
             <span class="chip">02</span>
-            <h3>Bring the secret files</h3>
+            <h3><i>🔐</i>Bring the secret files</h3>
             <p>Environment values from Infisical, keystore and store keys from
                object storage.</p>
           </div>
           <div class="step fragment fade-up">
             <span class="chip">03</span>
-            <h3>Generate the code</h3>
+            <h3><i>🧬</i>Generate the code</h3>
             <p>Generated Dart files are git-ignored, so they are rebuilt after the
                environment file.</p>
           </div>
           <div class="step fragment fade-up">
             <span class="chip">04</span>
-            <h3>Build the release</h3>
+            <h3><i>🏗️</i>Build the release</h3>
             <p>Flutter for a normal build, Shorebird for a code push, on the exact
                pinned SDK.</p>
           </div>
           <div class="step fragment fade-up">
             <span class="chip on">05</span>
-            <h3>Upload it automatically</h3>
+            <h3><i>🚀</i>Upload it automatically</h3>
             <p>fastlane to Play internal testing, altool to TestFlight. Nothing
                goes up by hand.</p>
           </div>
@@ -435,7 +497,7 @@ h1,h2,h3{
 
         <div class="stack">
           <div class="card fragment fade-up">
-            <div class="card-hd">What the developer gives</div>
+            <div class="card-hd"><i>🎛️</i>What the developer gives</div>
             <div class="row"><span class="lbl">Platform</span><span class="val">Android / iOS</span></div>
             <div class="row"><span class="lbl">Build runner</span><span class="val">Flutter / Shorebird</span></div>
             <div class="row"><span class="lbl">Version</span><span class="val">1.0.0</span></div>
@@ -443,14 +505,14 @@ h1,h2,h3{
           </div>
 
           <div class="card fragment fade-up">
-            <div class="card-hd">Where it ships</div>
+            <div class="card-hd"><i>📦</i>Where it ships</div>
             <div class="row"><b>Android</b><span class="arrow">&rarr;</span><span class="lbl">Play internal testing</span></div>
             <div class="row"><b>iOS</b><span class="arrow">&rarr;</span><span class="lbl">TestFlight</span></div>
           </div>
 
           <div class="card fill-mint fragment fade-up">
-            <div class="card-hd">Reusable</div>
-            <h3>One Jenkinsfile, every project</h3>
+            <div class="card-hd"><i>♻️</i>Reusable</div>
+            <h3><i>♻️</i>One Jenkinsfile, every project</h3>
             <p style="font-size:var(--f2);color:var(--forest);opacity:.78;margin-top:var(--s1);">
               Only pipeline.properties changes — repository, SDK version, secret
               files and store identifiers.</p>
@@ -469,7 +531,7 @@ h1,h2,h3{
   <div class="frame">
     <div class="fill">
       <span class="section-no">03</span>
-      <h2>The variables</h2>
+      <h2><i>🔧</i>The variables</h2>
       <div class="accent"></div>
       <p class="lede">The Jenkinsfile is identical for every project. These eighteen settings in pipeline.properties are the whole difference between one app and the next — grouped here by what they configure.</p>
       <div class="tags"><span class="badge">Git</span><span class="badge">Flutter</span><span class="badge">Infisical</span><span class="badge">Object storage</span><span class="badge">Shorebird</span><span class="badge">Google Play</span><span class="badge">App Store Connect</span></div>
@@ -493,42 +555,42 @@ h1,h2,h3{
       <div class="groups">
         <div class="card group fragment fade-up">
           <span class="chip">5</span>
-          <h3>Git</h3>
+          <h3><i>🌿</i>Git</h3>
           <p>Which repository, which branch, and how to reach it.</p>
         </div>
         <div class="card group fragment fade-up">
           <span class="chip">1</span>
-          <h3>Flutter</h3>
+          <h3><i>🐦</i>Flutter</h3>
           <p>The exact SDK version the app is built with.</p>
         </div>
         <div class="card group fragment fade-up">
           <span class="chip">4</span>
-          <h3>Infisical</h3>
+          <h3><i>🔑</i>Infisical</h3>
           <p>Where the environment values in .env come from.</p>
         </div>
         <div class="card group fragment fade-up">
           <span class="chip">3</span>
-          <h3>Object storage</h3>
+          <h3><i>🪣</i>Object storage</h3>
           <p>Where the files that cannot be committed come from.</p>
         </div>
         <div class="card group fragment fade-up">
           <span class="chip">1</span>
-          <h3>Shorebird</h3>
+          <h3><i>⚡</i>Shorebird</h3>
           <p>The token that publishes a code push release.</p>
         </div>
         <div class="card group fragment fade-up">
           <span class="chip">1</span>
-          <h3>Google Play</h3>
+          <h3><i>🤖</i>Google Play</h3>
           <p>Which listing the app bundle is uploaded to.</p>
         </div>
         <div class="card group fragment fade-up">
           <span class="chip">2</span>
-          <h3>App Store Connect</h3>
+          <h3><i>🍎</i>App Store Connect</h3>
           <p>Which key signs the upload to TestFlight.</p>
         </div>
         <div class="card fill-mint group fragment fade-up">
           <span class="chip on">!</span>
-          <h3>Never a secret</h3>
+          <h3><i>🚫</i>Never a secret</h3>
           <p>Every credential is a Jenkins ID. A raw token is rejected.</p>
         </div>
       </div>
@@ -549,7 +611,7 @@ h1,h2,h3{
 
       <div class="three">
         <div class="card fragment fade-up">
-          <div class="hd-row"><div class="card-hd">Git</div><span class="badge">Always</span></div>
+          <div class="hd-row"><div class="card-hd"><i>🌿</i>Git</div><span class="badge">Always</span></div>
           <div class="var"><code>GIT_PROTOCOL</code><span class="ex">https</span></div>
           <div class="var"><code>GIT_HOST</code><span class="ex">gitlab.webelight.co.in</span></div>
           <div class="var"><code>GIT_REPO_PATH</code><span class="ex">webelight/ccmt/…</span></div>
@@ -558,7 +620,7 @@ h1,h2,h3{
         </div>
 
         <div class="card fragment fade-up">
-          <div class="hd-row"><div class="card-hd">The clone URL</div></div>
+          <div class="hd-row"><div class="card-hd"><i>🔗</i>The clone URL</div></div>
           <p class="note">Host and path are kept apart so the URL is assembled in
              one place, and the protocol decides its shape.</p>
           <p class="note"><code>ssh</code> &nbsp;git@HOST:PATH.git</p>
@@ -568,7 +630,7 @@ h1,h2,h3{
         </div>
 
         <div class="card fragment fade-up">
-          <div class="hd-row"><div class="card-hd">Flutter</div><span class="badge">Always</span></div>
+          <div class="hd-row"><div class="card-hd"><i>🐦</i>Flutter</div><span class="badge">Always</span></div>
           <div class="var"><code>FLUTTER_VERSION</code><span class="ex">3.44.6</span></div>
           <p class="note">FVM installs this exact SDK on the agent and the build
              fails if the active version does not match, so the same commit
@@ -592,7 +654,7 @@ h1,h2,h3{
 
       <div class="three">
         <div class="card fragment fade-up">
-          <div class="hd-row"><div class="card-hd">Infisical</div><span class="badge">Always</span></div>
+          <div class="hd-row"><div class="card-hd"><i>🔑</i>Infisical</div><span class="badge">Always</span></div>
           <div class="var"><code>INFISICAL_API_URL</code><span class="ex">app.infisical.com</span></div>
           <div class="var"><code>INFISICAL_PROJECT_ID</code><span class="ex">ebac93cc-…</span></div>
           <div class="var"><code>INFISICAL_ENV</code><span class="ex">prod</span></div>
@@ -601,7 +663,7 @@ h1,h2,h3{
         </div>
 
         <div class="card fragment fade-up">
-          <div class="hd-row"><div class="card-hd">Object storage</div><span class="badge cond">With files</span></div>
+          <div class="hd-row"><div class="card-hd"><i>🪣</i>Object storage</div><span class="badge cond">With files</span></div>
           <div class="var"><code>S3_ENDPOINT</code><span class="ex">…r2.cloudflarestorage.com</span></div>
           <div class="var"><code>S3_REGION</code><span class="ex">auto</span></div>
           <div class="var"><code>S3_CREDENTIALS_ID</code><span class="ex">r2-credentials</span></div>
@@ -610,7 +672,7 @@ h1,h2,h3{
         </div>
 
         <div class="card fragment fade-up">
-          <div class="hd-row"><div class="card-hd">Secret files</div><span class="badge cond">Per file</span></div>
+          <div class="hd-row"><div class="card-hd"><i>📄</i>Secret files</div><span class="badge cond">Per file</span></div>
           <p class="note">One line per file. The key is where it lands in the
              project, the value is where it comes from.</p>
           <p class="note"><code>SECRET_FILE.&lt;path&gt;=s3://&lt;bucket&gt;/&lt;object&gt;</code></p>
@@ -636,7 +698,7 @@ h1,h2,h3{
 
       <div class="three">
         <div class="card fragment fade-up">
-          <div class="hd-row"><div class="card-hd">Google Play</div><span class="badge cond">Android</span></div>
+          <div class="hd-row"><div class="card-hd"><i>🤖</i>Google Play</div><span class="badge cond">Android</span></div>
           <div class="var"><code>ANDROID_PACKAGE_NAME</code><span class="ex">com.chinmayamission.app</span></div>
           <div class="var"><code>SECRET_FILE.…/play-store.json</code><span class="ex">service account</span></div>
           <p class="note">supply addresses a listing by package name, so it has
@@ -644,7 +706,7 @@ h1,h2,h3{
         </div>
 
         <div class="card fragment fade-up">
-          <div class="hd-row"><div class="card-hd">App Store Connect</div><span class="badge cond">iOS</span></div>
+          <div class="hd-row"><div class="card-hd"><i>🍎</i>App Store Connect</div><span class="badge cond">iOS</span></div>
           <div class="var"><code>ASC_KEY_ID</code><span class="ex">7UB3848ZB4</span></div>
           <div class="var"><code>ASC_ISSUER_ID</code><span class="ex">69a6de93-…</span></div>
           <div class="var"><code>SECRET_FILE.…/AuthKey.p8</code><span class="ex">private key</span></div>
@@ -653,7 +715,7 @@ h1,h2,h3{
         </div>
 
         <div class="card fragment fade-up">
-          <div class="hd-row"><div class="card-hd">Shorebird</div><span class="badge cond">Code push</span></div>
+          <div class="hd-row"><div class="card-hd"><i>⚡</i>Shorebird</div><span class="badge cond">Code push</span></div>
           <div class="var"><code>SHOREBIRD_TOKEN_CREDENTIALS_ID</code><span class="ex">shorebird-token</span></div>
           <p class="note">Only read when the build runner is Shorebird. The token
              is proved non-empty in the first stage, so a bad one fails in
@@ -663,6 +725,167 @@ h1,h2,h3{
     </div>
 
     <div class="foot"><b>Flutter Release Pipeline</b><span>Shipping &nbsp;·&nbsp; 07</span></div>
+  </div>
+</section>
+
+<!-- ══════════ SECTION DIVIDER ══════════ -->
+<section class="dark divider" data-background-color="#1A312C" data-transition="slide">
+  <div class="shape"></div>
+  <div class="frame">
+    <div class="fill">
+      <span class="section-no">04</span>
+      <h2><i>🧰</i>Getting set up</h2>
+      <div class="accent"></div>
+      <p class="lede">
+        What a developer does once, before the pipeline can ship their app.
+        Two store accounts, two keys, and one handover to DevOps.
+      </p>
+      <div class="tags">
+        <span class="badge">Xcode</span><span class="badge">App Store Connect</span>
+        <span class="badge">Google Cloud</span><span class="badge">Play Console</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 8 · APPLE SETUP ══════════ -->
+<section data-transition="slide">
+  <div class="shape"></div>
+  <div class="frame">
+    <div class="fill">
+      <div class="kicker">Apple</div>
+      <h2>Three steps for iOS</h2>
+      <div class="accent"></div>
+
+      <div class="three">
+        <div class="card fragment fade-up">
+          <div class="hd-row"><div class="card-hd"><i>💻</i>Runner Mac</div><span class="badge">Step 01</span></div>
+          <h3><i>🔓</i>Sign in to Xcode</h3>
+          <p class="note">Settings → Accounts → add the Apple account and pick the
+             team. Certificates and provisioning profiles then install themselves.</p>
+          <p class="note">It has to be the runner Mac. Signing in on your own
+             laptop does nothing for the pipeline.</p>
+        </div>
+
+        <div class="card fragment fade-up">
+          <div class="hd-row"><div class="card-hd"><i>🍎</i>App Store Connect</div><span class="badge">Step 02</span></div>
+          <h3><i>🔑</i>Create an API key</h3>
+          <p class="note">Users and Access → Integrations → App Store Connect API.
+             Set the role to <strong>App Manager</strong> — the smallest role that
+             can upload builds and manage versions.</p>
+          <p class="note">Note the Issuer ID and Key ID. The .p8 downloads exactly
+             once and cannot be recovered.</p>
+        </div>
+
+        <div class="card fragment fade-up">
+          <div class="hd-row"><div class="card-hd"><i>📝</i>Text editor</div><span class="badge">Step 03</span></div>
+          <h3><i>📄</i>Write ExportOptions.plist</h3>
+          <p class="note">Copy the template and replace <code>teamID</code> with
+             your Apple Developer Team ID.</p>
+          <p class="note">Leave <code>method</code> as
+             <code>app-store-connect</code>. Any other value signs the app for
+             something else and TestFlight rejects the build.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot"><b>Flutter Release Pipeline</b><span>Apple setup &nbsp;·&nbsp; 08</span></div>
+  </div>
+</section>
+
+<!-- ══════════ 9 · GOOGLE SETUP ══════════ -->
+<section data-transition="slide">
+  <div class="shape"></div>
+  <div class="frame">
+    <div class="fill">
+      <div class="kicker">Google</div>
+      <h2>Four steps for Android</h2>
+      <div class="accent"></div>
+
+      <div class="four">
+        <div class="card fragment fade-up">
+          <div class="hd-row"><div class="card-hd"><i>☁️</i>Cloud Console</div><span class="badge">Step 01</span></div>
+          <h3><i>🔌</i>Enable the API</h3>
+          <p class="note">APIs &amp; Services → Library → Google Play Android
+             Developer API → Enable.</p>
+          <p class="note">Without it the key authenticates fine but every upload
+             fails.</p>
+        </div>
+
+        <div class="card fragment fade-up">
+          <div class="hd-row"><div class="card-hd"><i>☁️</i>Cloud Console</div><span class="badge">Step 02</span></div>
+          <h3><i>👤</i>Create the account</h3>
+          <p class="note">IAM &amp; Admin → Service Accounts → create
+             <code>play-store-ci</code>.</p>
+          <p class="note">Leave every Google Cloud role empty. Access is granted
+             in the Play Console, not here.</p>
+        </div>
+
+        <div class="card fragment fade-up">
+          <div class="hd-row"><div class="card-hd"><i>☁️</i>Cloud Console</div><span class="badge">Step 03</span></div>
+          <h3><i>🗝️</i>Create a JSON key</h3>
+          <p class="note">Open the account → Keys → Add key → Create new key →
+             JSON.</p>
+          <p class="note">Google never shows it again. Lose the file and you make
+             a new key.</p>
+        </div>
+
+        <div class="card fragment fade-up">
+          <div class="hd-row"><div class="card-hd"><i>▶️</i>Play Console</div><span class="badge">Step 04</span></div>
+          <h3><i>✅</i>Grant access</h3>
+          <p class="note">Users and permissions → invite the
+             <code>client_email</code> from the JSON, not your own.</p>
+          <p class="note">Tick Release apps to testing tracks and View app
+             information. Owner or admin only.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot"><b>Flutter Release Pipeline</b><span>Google setup &nbsp;·&nbsp; 09</span></div>
+  </div>
+</section>
+
+<!-- ══════════ 10 · HANDOVER ══════════ -->
+<section data-transition="slide">
+  <div class="shape"></div>
+  <div class="frame">
+    <div class="fill">
+      <div class="kicker">Handover</div>
+      <h2>What to give DevOps</h2>
+      <div class="accent"></div>
+
+      <div class="three">
+        <div class="card fragment fade-up">
+          <div class="hd-row"><div class="card-hd"><i>🍎</i>Apple</div><span class="badge cond">All four</span></div>
+          <div class="var"><code>AuthKey_&lt;KeyID&gt;.p8</code><span class="ex">secret</span></div>
+          <div class="var"><code>Key ID</code><span class="ex">identifier</span></div>
+          <div class="var"><code>Issuer ID</code><span class="ex">identifier</span></div>
+          <div class="var"><code>ExportOptions.plist</code><span class="ex">settings</span></div>
+          <p class="note">The key alone is not enough — every Apple API call is
+             signed with all three, and the issuer id lives only on that page.</p>
+        </div>
+
+        <div class="card fragment fade-up">
+          <div class="hd-row"><div class="card-hd"><i>🤖</i>Google</div><span class="badge cond">Both</span></div>
+          <div class="var"><code>service-account.json</code><span class="ex">secret</span></div>
+          <div class="var"><code>client_email</code><span class="ex">identifier</span></div>
+          <p class="note">The email is what gets invited to the Play Console.
+             Without that grant the key exists but can do nothing.</p>
+        </div>
+
+        <div class="card fill-mint fragment fade-up">
+          <div class="hd-row"><div class="card-hd"><i>🔒</i>How to send them</div></div>
+          <h3><i>🔒</i>Secrets go through a vault</h3>
+          <p class="note">A password manager or a secrets vault — never email,
+             Slack, or a git commit. The .p8 signs your App Store identity and
+             the JSON can publish to your listing.</p>
+          <p class="note">The identifiers and the plist are just settings, so
+             those are fine to paste anywhere.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot"><b>Flutter Release Pipeline</b><span>Handover &nbsp;·&nbsp; 10</span></div>
   </div>
 </section>
 
@@ -676,6 +899,19 @@ Reveal.initialize({
   center:false, hash:true, progress:true, controls:true,
   controlsLayout:'edges', transition:'fade', transitionSpeed:'fast'
 });
+
+// numbers count up when their slide is reached
+function countUp(el){
+  const to = +el.dataset.count, t0 = performance.now(), dur = 900;
+  (function tick(t){
+    const k = Math.min((t - t0) / dur, 1);
+    el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3)));
+    if (k < 1) requestAnimationFrame(tick);
+  })(t0);
+}
+const runCounters = s => s && s.querySelectorAll('[data-count]').forEach(countUp);
+Reveal.on('ready', e => runCounters(e.currentSlide));
+Reveal.on('slidechanged', e => runCounters(e.currentSlide));
 </script>
 </body>
 </html>
