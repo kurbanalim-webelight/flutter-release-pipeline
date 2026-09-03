@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flutter Release Pipeline</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
+
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   DESIGN SYSTEM
+
+   The UI/UX Playbook (uxpeak)
+     p16  Alignment — one grid, one alignment strategy, kept consistent
+     p24  Whitespace — start with too much, remove down
+     p27  Spacing system — multiples of 8, no arbitrary values
+     p28  Avoid random numbers — 18/22/26/34px break the rhythm
+     p35  Balance & harmony — proportion, colour restraint, consistent
+          spacing / typography / element sizes
+     p38  Corner radius consistency — ONE radius scale, not five
+     p42  Card consistency — equal heights, headings and body copy of
+          the same length across a set
+     p44  Icon / element consistency — one style throughout
+
+   Refactoring UI (Wathan & Schoger)
+     Hierarchy from weight + colour, not size · three text colours per
+     surface · text on dark is a hue-matched tint, never white at low
+     opacity · separation by shadow and background before borders
+   ══════════════════════════════════════════════════════════════════ */
+:root{
+  /* palette */
+  --cream:#FFF4E1;
+  --forest:#1A312C;
+  --teal:#428475;
+  --mint:#89D7B7;
+
+  --ink-1:#1A312C;  --ink-2:#4C635B;  --ink-3:#8A9C94;
+  --sky-1:#FFF4E1;  --sky-2:#A9BFB7;  --sky-3:#7B948B;
+
+  --surface:#FFFFFF;
+  --surface-dark:#22403A;
+  --rule:#E6DCC8;
+  --rule-dark:#315047;
+
+  /* spacing — multiples of 8, nothing else */
+  --s1:8px;   --s2:16px;  --s3:24px;  --s4:32px;
+  --s5:40px;  --s6:48px;  --s7:64px;  --s8:80px;  --s9:96px;
+
+  /* type — one hand-picked scale */
+  --f1:12px;  --f2:14px;  --f3:16px;  --f4:20px;
+  --f5:24px;  --f6:32px;  --f7:44px;  --f8:64px;
+
+  /* radius — one scale */
+  --r1:8px;  --r2:12px;  --rp:999px;
+
+  --shadow:0 16px 32px -16px rgba(26,49,44,.28), 0 2px 4px -2px rgba(26,49,44,.10);
+  --shadow-dark:0 16px 32px -16px rgba(0,0,0,.55), 0 2px 4px -2px rgba(0,0,0,.30);
+}
+
+html,body,.reveal-viewport{background:var(--cream);}
+
+.reveal{
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  font-size:var(--f3);
+  color:var(--ink-1);
+  -webkit-font-smoothing:antialiased;
+}
+.reveal .slides{text-align:left;}
+.reveal .slides section{
+  width:100%;height:100%;
+  padding:0 !important;
+  overflow:hidden;
+  background:var(--cream);
+}
+
+/* one frame, identical on every slide */
+.frame{
+  position:absolute;inset:0;
+  width:1312px;margin:0 auto;
+  padding:var(--s7) 0 var(--s5);
+  display:flex;flex-direction:column;
+}
+.fill{flex:1;display:flex;flex-direction:column;justify-content:center;}
+
+/* ── type ───────────────────────────────────────────────────────── */
+h1,h2,h3{
+  font-family:'Inter Tight','Inter',sans-serif;
+  color:var(--ink-1);margin:0;text-transform:none;text-shadow:none;
+}
+.reveal h1{font-size:var(--f8);line-height:1.04;letter-spacing:-.035em;font-weight:700;}
+.reveal h2{font-size:var(--f7);line-height:1.08;letter-spacing:-.03em;font-weight:700;}
+.reveal h3{font-size:var(--f4);line-height:1.3;letter-spacing:-.014em;font-weight:600;}
+.reveal p{margin:0;line-height:1.5;}
+.reveal strong{font-weight:600;color:var(--ink-1);}
+
+.kicker{
+  display:inline-flex;align-self:flex-start;align-items:center;gap:var(--s1);
+  font-size:var(--f1);font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--teal);background:rgba(137,215,183,.28);
+  padding:var(--s1) var(--s2);border-radius:var(--rp);
+  margin-bottom:var(--s3);
+}
+.kicker::before{content:"";width:var(--s1);height:var(--s1);border-radius:50%;background:var(--teal);}
+
+.accent{width:var(--s6);flex:none;height:4px;background:var(--mint);border-radius:2px;margin:var(--s3) 0;}
+.reveal .lede{font-size:var(--f4);line-height:1.5;color:var(--ink-2);max-width:64ch;margin-bottom:var(--s6);}
+
+/* ── dark surface ───────────────────────────────────────────────── */
+.dark{background:var(--forest) !important;}
+.dark h1,.dark h2,.dark h3{color:var(--sky-1);}
+.dark .lede{color:var(--sky-2);}
+.dark strong{color:var(--sky-1);}
+.dark .kicker{color:var(--mint);background:rgba(137,215,183,.14);}
+.dark .kicker::before{background:var(--mint);}
+.dark .foot{border-color:var(--rule-dark);color:var(--sky-3);}
+.dark .foot b{color:var(--sky-2);}
+
+/* ── footer, identical on every slide ───────────────────────────── */
+.foot{
+  display:flex;justify-content:space-between;align-items:baseline;
+  border-top:1px solid var(--rule);padding-top:var(--s2);
+  font-size:var(--f1);letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:500;
+}
+.foot b{color:var(--ink-2);font-weight:600;}
+
+/* ── one background shape, same size and place on every slide ───── */
+.shape{
+  position:absolute;width:480px;height:480px;border-radius:50%;
+  right:-240px;bottom:-280px;background:var(--mint);opacity:.14;
+  pointer-events:none;z-index:0;
+}
+.dark .shape{opacity:.06;}
+.frame > *{position:relative;z-index:1;}
+
+/* ── card — ONE card component, used everywhere ─────────────────── */
+.card{
+  background:var(--surface);
+  border-radius:var(--r2);
+  padding:var(--s3);
+  box-shadow:var(--shadow);
+}
+.dark .card{background:var(--surface-dark);box-shadow:var(--shadow-dark);}
+.card.fill-mint{background:var(--mint);box-shadow:0 16px 32px -16px rgba(26,49,44,.40);}
+.card-hd{
+  font-size:var(--f1);font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--teal);margin-bottom:var(--s2);
+}
+.card.fill-mint .card-hd{color:var(--forest);opacity:.6;}
+
+/* ── chip — ONE chip component ──────────────────────────────────── */
+.chip{
+  width:var(--s4);height:var(--s4);border-radius:var(--r1);flex:none;
+  font-family:'Inter Tight',sans-serif;font-size:var(--f1);font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(137,215,183,.24);color:var(--teal);
+}
+.dark .chip{background:rgba(137,215,183,.16);color:var(--mint);}
+.chip.on{background:var(--mint);color:var(--forest);}
+
+/* ── row — ONE list-row component ───────────────────────────────── */
+.row{display:flex;align-items:center;gap:var(--s2);padding:var(--s1) 0;font-size:var(--f2);}
+.row+.row{border-top:1px solid var(--rule);}
+.row .lbl{color:var(--ink-2);}
+.row .val{margin-left:auto;font-weight:600;color:var(--ink-1);}
+.row .arrow{color:var(--teal);font-weight:600;}
+.row b{color:var(--ink-1);font-weight:600;min-width:var(--s8);}
+
+/* ── grids ──────────────────────────────────────────────────────── */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3);}
+.hero{display:grid;grid-template-columns:1.25fr 1fr;gap:var(--s8);align-items:center;}
+.split{display:grid;grid-template-columns:1.5fr 1fr;gap:var(--s8);align-items:start;}
+.stack{display:flex;flex-direction:column;gap:var(--s3);}
+
+/* ── slide 1 · meta strip ───────────────────────────────────────── */
+.meta{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s6);
+  border-top:1px solid var(--rule);padding-top:var(--s3);margin-top:var(--s6);
+}
+.meta .k{font-size:var(--f1);font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+         color:var(--teal);margin-bottom:var(--s1);}
+.meta .v{font-size:var(--f3);font-weight:600;color:var(--ink-1);line-height:1.4;}
+.meta .v em{display:block;font-style:normal;font-weight:400;color:var(--ink-2);
+            font-size:var(--f2);margin-top:4px;}
+
+/* ── slide 2 · problem cards (equal height, equal copy length) ──── */
+.problem{display:grid;grid-template-columns:var(--s4) 1fr;column-gap:var(--s2);row-gap:0;align-content:start;}
+.problem h3{grid-column:2;align-self:center;}
+.problem p{grid-column:2;font-size:var(--f2);line-height:1.5;color:var(--sky-2);margin-top:var(--s1);}
+.dark .problem p{color:var(--sky-2);}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s6);
+       border-top:1px solid var(--rule-dark);padding-top:var(--s3);margin-top:var(--s5);}
+.stats .v{font-family:'Inter Tight',sans-serif;font-size:var(--f6);font-weight:700;
+          letter-spacing:-.025em;color:var(--mint);line-height:1;}
+.stats .k{font-size:var(--f2);color:var(--sky-3);margin-top:var(--s1);}
+
+/* ── slide 3 · stepper ──────────────────────────────────────────── */
+.steps{position:relative;}
+.steps::before{content:"";position:absolute;left:15px;top:var(--s4);bottom:var(--s4);
+               width:2px;background:var(--rule);}
+.step{display:grid;grid-template-columns:var(--s4) 1fr;column-gap:var(--s2);row-gap:0;padding-bottom:var(--s3);}
+.step:last-child{padding-bottom:0;}
+.step .chip{grid-row:1 / span 2;border-radius:50%;position:relative;z-index:1;background:var(--cream);
+            border:2px solid var(--rule);}
+.step:last-child .chip{background:var(--mint);border-color:var(--mint);color:var(--forest);}
+.step h3{grid-column:2;font-size:var(--f3);align-self:center;}
+.step p{grid-column:2;font-size:var(--f2);line-height:1.5;color:var(--ink-2);margin-top:4px;max-width:56ch;}
+
+@media (max-width:1400px){ .frame{width:auto;left:var(--s6);right:var(--s6);} }
+@media (max-width:860px){
+  .frame{left:var(--s3);right:var(--s3);padding:var(--s3) 0;}
+  .hero,.split,.two,.meta,.stats{grid-template-columns:1fr;gap:var(--s3);}
+}
+
+/* ── reveal chrome ──────────────────────────────────────────────── */
+.reveal .progress{color:var(--teal);height:3px;}
+.reveal .slide-number{display:none;}
+.reveal .controls{color:var(--teal);}
+.reveal .fragment.fade-up{opacity:0;transform:translateY(8px);transition:all .3s ease;}
+.reveal .fragment.fade-up.visible{opacity:1;transform:none;}
+</style>
+</head>
+<body>
+
+<div class="reveal">
+<div class="slides">
+
+<!-- ══════════ 1 · INTRODUCTION ══════════ -->
+<section data-transition="fade">
+  <div class="shape"></div>
+  <div class="frame">
+    <div class="fill">
+      <div class="hero">
+        <div>
+          <div class="kicker">Release Engineering</div>
+          <h1>Flutter Release<br>Pipeline</h1>
+          <div class="accent"></div>
+          <p class="lede">
+            One Jenkins job that takes the app from a Git commit to Play Store
+            internal testing and TestFlight, with nobody doing a step by hand.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-hd">The pipeline</div>
+          <div class="row"><span class="chip">01</span><span class="lbl">Clone the repository</span></div>
+          <div class="row"><span class="chip">02</span><span class="lbl">Bring the secret files</span></div>
+          <div class="row"><span class="chip">03</span><span class="lbl">Generate the code</span></div>
+          <div class="row"><span class="chip">04</span><span class="lbl">Build the release</span></div>
+          <div class="row"><span class="chip on">05</span><span class="lbl">Upload to the testers</span></div>
+        </div>
+      </div>
+
+      <div class="meta">
+        <div><div class="k">What it is</div><div class="v">Five automated stages<em>Always run in the same order</em></div></div>
+        <div><div class="k">How it runs</div><div class="v">Four inputs, one button<em>Everything after is automatic</em></div></div>
+        <div><div class="k">Where it runs</div><div class="v">A dedicated Mac agent<em>Same tools for Android and iOS</em></div></div>
+      </div>
+    </div>
+
+    <div class="foot"><b>Flutter Release Pipeline</b><span>Introduction &nbsp;·&nbsp; 01</span></div>
+  </div>
+</section>
+
+<!-- ══════════ 2 · PROBLEM ══════════ -->
+<section class="dark" data-background-color="#1A312C" data-transition="slide">
+  <div class="shape"></div>
+  <div class="frame">
+    <div class="fill">
+      <div class="kicker">The problem</div>
+      <h2>Every release was done by hand</h2>
+      <div class="accent"></div>
+      <p class="lede">
+        One developer, on one laptop, repeating the same steps for every build —
+        and he was the only person who knew all of them.
+      </p>
+
+      <div class="two">
+        <div class="card problem fragment fade-up">
+          <span class="chip">01</span>
+          <h3>Everything was manual</h3>
+          <p>Take the code, place the environment and secret files, run the build,
+             wait, then upload the artifact and retype the version.</p>
+        </div>
+        <div class="card problem fragment fade-up">
+          <span class="chip">02</span>
+          <h3>Mistakes surfaced last</h3>
+          <p>A wrong environment, a mismatched Flutter version or a used build
+             number only appeared after a forty-minute build.</p>
+        </div>
+        <div class="card problem fragment fade-up">
+          <span class="chip">03</span>
+          <h3>The release was slow</h3>
+          <p>Half a day per release. The testing team waited, the client waited,
+             and the developer watched a build screen.</p>
+        </div>
+        <div class="card problem fragment fade-up">
+          <span class="chip">04</span>
+          <h3>Uploading was its own job</h3>
+          <p>Play Console and TestFlight, by hand, two logins and two sets of
+             keys. Forget it and a finished build waits.</p>
+        </div>
+      </div>
+
+      <div class="stats fragment fade-up">
+        <div><div class="v">~4 hrs</div><div class="k">Developer time per release</div></div>
+        <div><div class="v">40 min</div><div class="k">To find out a build was wrong</div></div>
+        <div><div class="v">2</div><div class="k">Consoles to upload by hand</div></div>
+      </div>
+    </div>
+
+    <div class="foot"><b>Flutter Release Pipeline</b><span>The problem &nbsp;·&nbsp; 02</span></div>
+  </div>
+</section>
+
+<!-- ══════════ 3 · SOLUTION ══════════ -->
+<section data-transition="slide">
+  <div class="shape"></div>
+  <div class="frame">
+    <div class="fill">
+      <div class="kicker">The solution</div>
+      <h2>Five steps, the same order, every time</h2>
+      <div class="accent"></div>
+
+      <div class="split">
+        <div class="steps">
+          <div class="step fragment fade-up">
+            <span class="chip">01</span>
+            <h3>Clone the repository</h3>
+            <p>Clones the branch from GitLab with a stored credential and prints
+               the exact commit.</p>
+          </div>
+          <div class="step fragment fade-up">
+            <span class="chip">02</span>
+            <h3>Bring the secret files</h3>
+            <p>Environment values from Infisical, keystore and store keys from
+               object storage.</p>
+          </div>
+          <div class="step fragment fade-up">
+            <span class="chip">03</span>
+            <h3>Generate the code</h3>
+            <p>Generated Dart files are git-ignored, so they are rebuilt after the
+               environment file.</p>
+          </div>
+          <div class="step fragment fade-up">
+            <span class="chip">04</span>
+            <h3>Build the release</h3>
+            <p>Flutter for a normal build, Shorebird for a code push, on the exact
+               pinned SDK.</p>
+          </div>
+          <div class="step fragment fade-up">
+            <span class="chip on">05</span>
+            <h3>Upload it automatically</h3>
+            <p>fastlane to Play internal testing, altool to TestFlight. Nothing
+               goes up by hand.</p>
+          </div>
+        </div>
+
+        <div class="stack">
+          <div class="card fragment fade-up">
+            <div class="card-hd">What the developer gives</div>
+            <div class="row"><span class="lbl">Platform</span><span class="val">Android / iOS</span></div>
+            <div class="row"><span class="lbl">Build runner</span><span class="val">Flutter / Shorebird</span></div>
+            <div class="row"><span class="lbl">Version</span><span class="val">1.0.0</span></div>
+            <div class="row"><span class="lbl">Build number</span><span class="val">32</span></div>
+          </div>
+
+          <div class="card fragment fade-up">
+            <div class="card-hd">Where it ships</div>
+            <div class="row"><b>Android</b><span class="arrow">&rarr;</span><span class="lbl">Play internal testing</span></div>
+            <div class="row"><b>iOS</b><span class="arrow">&rarr;</span><span class="lbl">TestFlight</span></div>
+          </div>
+
+          <div class="card fill-mint fragment fade-up">
+            <div class="card-hd">Reusable</div>
+            <h3>One Jenkinsfile, every project</h3>
+            <p style="font-size:var(--f2);color:var(--forest);opacity:.78;margin-top:var(--s1);">
+              Only pipeline.properties changes — repository, SDK version, secret
+              files and store identifiers.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot"><b>Flutter Release Pipeline</b><span>The solution &nbsp;·&nbsp; 03</span></div>
+  </div>
+</section>
+
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.js"></script>
+<script>
+Reveal.initialize({
+  width:1600, height:900, margin:0, minScale:0.2, maxScale:1.5,
+  center:false, hash:true, progress:true, controls:true,
+  controlsLayout:'edges', transition:'fade', transitionSpeed:'fast'
+});
+</script>
+</body>
+</html>
