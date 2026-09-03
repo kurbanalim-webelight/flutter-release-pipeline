@@ -1,0 +1,107 @@
+FLUTTER RELEASE PIPELINE - PRESENTATION CONTENT
+===============================================
+
+
+1. WHY THIS PIPELINE, AND WHAT IT SOLVES
+----------------------------------------
+
+The problem: a release was a person, not a process.
+
+Shipping a build meant one developer, on one laptop, running a long list of
+steps by hand and remembering all of them in the right order. Every release
+depended on that machine being set up correctly and on nobody skipping a step.
+
+
+The problems we were facing
+---------------------------
+
+  Problem 1 - Developer has to do everything by hand
+
+  Every time we want to give a build, one developer has to sit and do the full
+  work manually. He has to take the latest code, run the build command, wait for
+  it to finish, and then upload that build himself. For Android he has to open
+  the Play Console and upload the .aab file. For iOS he has to open Transporter
+  and upload the .ipa file. Then again he has to type the version name and paste
+  the release notes.
+
+  This is 30 to 40 minutes of the developer's time, every single time. And it is
+  the same boring steps again and again. Also only that one person knows the
+  full process, so if he is on leave, nobody else can give the build.
+
+
+  Problem 2 - Mistakes are found only at the end
+
+  Many small things can go wrong. The .env file is missing or has the wrong
+  environment. The Flutter version on the laptop is not the same version the
+  project needs. The keystore file or google-services.json is old. The build
+  number is already used in Play Console. Someone forgot to run the code
+  generation step.
+
+  The bad part is not the mistake. The bad part is WHEN we come to know about
+  it. The build takes 30 to 40 minutes to compile, and only after that, at the
+  upload step, we get the error. So we correct one small thing and again wait
+  40 minutes. Sometimes this happens two, three times in one day.
+
+
+  Problem 3 - The whole thing is slow
+
+  Because everything is manual and mistakes come late, one release easily takes
+  half a day. Testing team is waiting, client is waiting, and the developer is
+  only sitting and watching the build screen. He cannot do his actual work.
+
+  And if we need a small urgent fix, still we have to do the same full process
+  again from the beginning. There is no shortcut.
+
+
+  Problem 4 - Uploading to the testing tracks is a separate manual job
+
+  Even after the build is ready, the work is not over. Android build has to go
+  to the internal testing track in Play Console, and iOS build has to go to
+  TestFlight. Both are done by hand, in two different websites, with two
+  different login accounts.
+
+  If the developer forgets to upload, the testing team keeps waiting for a build
+  that is already ready but sitting on somebody's laptop. And each upload needs
+  the correct key and correct permission, which not everybody has.
+
+
+What the pipeline does instead
+------------------------------
+
+  * One button, two inputs
+    Pick platform and build runner, type the version and build number. Jenkins
+    does the rest - clone, SDK, secrets, dependencies, codegen, build, upload.
+
+  * The exact SDK, every time
+    FLUTTER_VERSION is pinned by FVM and then verified as an exact string
+    match. A mismatch fails the build instead of silently shipping.
+
+  * Secrets never touch a laptop or a log
+    Environment values come from Infisical. Files come from S3-compatible
+    storage. Every token lives in Jenkins Credentials and is passed through the
+    environment - never on a command line, never in git, never in the console
+    output. Only counts are logged, never names or values.
+
+  * Fails in seconds, not in an hour
+    Inputs, config keys, credential IDs, package name shape, release name and
+    notes limits, and the Shorebird token are all checked before anything is
+    cloned or compiled.
+
+  * Ships itself
+    Android goes to the Play internal testing track via fastlane supply. iOS
+    goes to TestFlight via xcrun altool. No manual upload step at all.
+
+  * Repeatable and readable
+    Every run is named - "#17 Android/Flutter 1.0.0+32" - so the build history
+    tells you what shipped, when, and from which commit.
+
+
+The design decision that makes it reusable
+------------------------------------------
+
+The Jenkinsfile is IDENTICAL for every project. Everything project-specific
+lives in pipeline.properties - a plain KEY=VALUE file, split between the values
+DevOps owns (infrastructure, credentials) and the values the developer owns
+(the app itself).
+
+Onboarding a new app is a new properties file, not a new pipeline.
