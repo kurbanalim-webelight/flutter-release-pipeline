@@ -52,7 +52,7 @@
 
   /* type — one hand-picked scale */
   --f1:12px;  --f2:14px;  --f3:16px;  --f4:20px;
-  --f5:24px;  --f6:32px;  --f7:44px;  --f8:64px;
+  --f5:24px;  --f6:32px;  --f7:44px;  --f8:64px;  --f9:88px;
 
   /* radius — one scale */
   --r1:8px;  --r2:12px;  --rp:999px;
@@ -169,6 +169,18 @@ h1,h2,h3{
 .row .val{margin-left:auto;font-weight:600;color:var(--ink-1);}
 .row .arrow{color:var(--teal);font-weight:600;}
 .row b{color:var(--ink-1);font-weight:600;min-width:var(--s8);}
+
+/* ── section divider ────────────────────────────────────────────── */
+.section-no{
+  font-family:'Inter Tight',sans-serif;font-size:var(--f9);font-weight:700;
+  letter-spacing:-.045em;line-height:1;color:var(--mint);
+  display:block;margin-bottom:var(--s2);
+}
+.divider h2{max-width:20ch;}
+.reveal .divider .lede{margin-bottom:0;}
+.tags{display:flex;flex-wrap:wrap;gap:var(--s1);margin-top:var(--s4);}
+.dark .badge{background:rgba(137,215,183,.18);color:var(--mint);}
+.dark .badge.cond{background:rgba(137,215,183,.28);color:var(--forest);}
 
 /* ── variable groups ────────────────────────────────────────────── */
 .hd-row{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);margin-bottom:var(--s2);}
@@ -301,6 +313,19 @@ h1,h2,h3{
   </div>
 </section>
 
+<!-- ══════════ SECTION DIVIDER ══════════ -->
+<section class="dark divider" data-background-color="#1A312C" data-transition="slide">
+  <div class="shape"></div>
+  <div class="frame">
+    <div class="fill">
+      <span class="section-no">01</span>
+      <h2>The problem</h2>
+      <div class="accent"></div>
+      <p class="lede">How a release used to happen, what went wrong every time, and what it cost the team.</p>
+    </div>
+  </div>
+</section>
+
 <!-- ══════════ 2 · PROBLEM ══════════ -->
 <section class="dark" data-background-color="#1A312C" data-transition="slide">
   <div class="shape"></div>
@@ -349,6 +374,19 @@ h1,h2,h3{
     </div>
 
     <div class="foot"><b>Flutter Release Pipeline</b><span>The problem &nbsp;·&nbsp; 02</span></div>
+  </div>
+</section>
+
+<!-- ══════════ SECTION DIVIDER ══════════ -->
+<section class="dark divider" data-background-color="#1A312C" data-transition="slide">
+  <div class="shape"></div>
+  <div class="frame">
+    <div class="fill">
+      <span class="section-no">02</span>
+      <h2>The solution</h2>
+      <div class="accent"></div>
+      <p class="lede">The five stages the pipeline runs, in the same order, on every build.</p>
+    </div>
   </div>
 </section>
 
@@ -422,6 +460,20 @@ h1,h2,h3{
     </div>
 
     <div class="foot"><b>Flutter Release Pipeline</b><span>The solution &nbsp;·&nbsp; 03</span></div>
+  </div>
+</section>
+
+<!-- ══════════ SECTION DIVIDER ══════════ -->
+<section class="dark divider" data-background-color="#1A312C" data-transition="slide">
+  <div class="shape"></div>
+  <div class="frame">
+    <div class="fill">
+      <span class="section-no">03</span>
+      <h2>The variables</h2>
+      <div class="accent"></div>
+      <p class="lede">The Jenkinsfile is identical for every project. These eighteen settings in pipeline.properties are the whole difference between one app and the next — grouped here by what they configure.</p>
+      <div class="tags"><span class="badge">Git</span><span class="badge">Flutter</span><span class="badge">Infisical</span><span class="badge">Object storage</span><span class="badge">Shorebird</span><span class="badge">Google Play</span><span class="badge">App Store Connect</span></div>
+    </div>
   </div>
 </section>
 
