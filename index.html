@@ -170,6 +170,27 @@ h1,h2,h3{
 .row .arrow{color:var(--teal);font-weight:600;}
 .row b{color:var(--ink-1);font-weight:600;min-width:var(--s8);}
 
+/* ── reference links ───────────────────────────────────────────── */
+.links{display:flex;gap:var(--s7);flex-wrap:wrap;
+       border-top:1px solid var(--rule);padding-top:var(--s3);margin-top:var(--s4);}
+.links a{
+  display:block;text-decoration:none;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:var(--f2);font-weight:600;color:var(--teal);
+  transition:color .25s cubic-bezier(.2,.8,.2,1);
+}
+.links a span{
+  display:block;font-family:'Inter',sans-serif;font-size:var(--f2);font-weight:400;
+  color:var(--ink-3);margin-top:var(--s0);
+}
+.links a:hover{color:var(--ink-1);}
+.links a:hover span{color:var(--ink-2);}
+.dark .links{border-top-color:var(--rule-dark);}
+.dark .links a{color:var(--mint);}
+.dark .links a span{color:var(--sky-3);}
+.dark .links a:hover{color:var(--sky-1);}
+.dark .links a:hover span{color:var(--sky-2);}
+
 /* ── section divider ────────────────────────────────────────────── */
 .section-no{
   font-family:'Inter Tight',sans-serif;font-size:var(--f9);font-weight:700;
@@ -368,6 +389,12 @@ h3 i{font-size:1em;margin-right:var(--s1);}
         <div><div class="k">What it is</div><div class="v">Five automated stages<em>Always run in the same order</em></div></div>
         <div><div class="k">How it runs</div><div class="v">Four inputs, one button<em>Everything after is automatic</em></div></div>
         <div><div class="k">Where it runs</div><div class="v">A dedicated Mac agent<em>Same tools for Android and iOS</em></div></div>
+      </div>
+
+      <div class="links">
+        <a href="VARIABLES.md"><i>📄</i>VARIABLES.md<span>Every setting in pipeline.properties, explained</span></a>
+        <a href="DEVELOPER_HANDBOOK.md"><i>📘</i>DEVELOPER_HANDBOOK.md<span>Store accounts, keys and the handover</span></a>
+        <a href="README.md"><i>📗</i>README.md<span>What each pipeline stage does</span></a>
       </div>
     </div>
 
@@ -886,6 +913,30 @@ h3 i{font-size:1em;margin-right:var(--s1);}
     </div>
 
     <div class="foot"><b>Flutter Release Pipeline</b><span>Handover &nbsp;·&nbsp; 10</span></div>
+  </div>
+</section>
+
+<!-- ══════════ 15 · QUESTIONS ══════════ -->
+<section class="dark" data-background-color="#1A312C" data-transition="slide">
+  <div class="shape"></div>
+  <div class="frame">
+    <div class="fill">
+      <div class="kicker">Thank you</div>
+      <h1>Questions?</h1>
+      <div class="accent"></div>
+      <p class="lede">
+        One button, four inputs, and the build reaches the testers on its own.
+        Everything the pipeline needs to know about a project lives in one file.
+      </p>
+
+      <div class="links">
+        <a href="VARIABLES.md"><i>📄</i>VARIABLES.md<span>Every setting in pipeline.properties, explained</span></a>
+        <a href="DEVELOPER_HANDBOOK.md"><i>📘</i>DEVELOPER_HANDBOOK.md<span>Store accounts, keys and the handover</span></a>
+        <a href="README.md"><i>📗</i>README.md<span>What each pipeline stage does</span></a>
+      </div>
+    </div>
+
+    <div class="foot"><b>Flutter Release Pipeline</b><span>Questions &nbsp;·&nbsp; 15</span></div>
   </div>
 </section>
 
