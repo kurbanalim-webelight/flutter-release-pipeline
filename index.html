@@ -110,7 +110,23 @@ h1,h2,h3{
 .reveal .lede{font-size:var(--f4);line-height:1.5;color:var(--ink-2);max-width:64ch;margin-bottom:var(--s6);}
 
 /* ── dark surface ───────────────────────────────────────────────── */
-.dark{background:var(--forest) !important;}
+.dark{
+  /* one surface swap — every component reads these tokens */
+  --surface:var(--surface-dark);
+  --rule:var(--rule-dark);
+  --ink-1:var(--sky-1);
+  --ink-2:var(--sky-2);
+  --ink-3:var(--sky-3);
+  --teal:var(--mint);
+  background:var(--forest) !important;
+}
+/* the exceptions: elements that keep forest ink on a mint or cream ground */
+.dark .card.fill-mint h3,
+.dark .card.fill-mint p,
+.dark .card.fill-mint .row .lbl,
+.dark .card.fill-mint .row .val{color:var(--forest);}
+.dark .card.fill-mint .card-hd{color:var(--forest);opacity:.62;}
+.dark .step .chip{background:var(--forest);}
 .dark h1,.dark h2,.dark h3{color:var(--sky-1);}
 .dark .lede{color:var(--sky-2);}
 .dark strong{color:var(--sky-1);}
@@ -171,30 +187,35 @@ h1,h2,h3{
 .row b{color:var(--ink-1);font-weight:600;min-width:var(--s8);}
 
 /* ── reference links ───────────────────────────────────────────── */
-.links{display:flex;gap:var(--s7);flex-wrap:wrap;
-       border-top:1px solid var(--rule);padding-top:var(--s3);margin-top:var(--s4);}
+.links{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s6);
+       border-top:1px solid var(--rule);padding-top:var(--s3);margin-top:var(--s5);}
 .links a{
   display:block;text-decoration:none;
+  border-left:2px solid var(--mint);padding-left:var(--s2);
+  transition:border-color .25s cubic-bezier(.2,.8,.2,1);
+}
+.links a b{
+  display:block;
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-  font-size:var(--f2);font-weight:600;color:var(--teal);
+  font-size:var(--f2);font-weight:600;color:var(--teal);letter-spacing:-.01em;
   transition:color .25s cubic-bezier(.2,.8,.2,1);
 }
 .links a span{
   display:block;font-family:'Inter',sans-serif;font-size:var(--f2);font-weight:400;
-  color:var(--ink-3);margin-top:var(--s0);
+  color:var(--ink-2);margin-top:var(--s0);
 }
-.links a:hover{color:var(--ink-1);}
-.links a:hover span{color:var(--ink-2);}
+.links a:hover{border-left-color:var(--teal);}
+.links a:hover b{color:var(--ink-1);}
 .dark .links{border-top-color:var(--rule-dark);}
-.dark .links a{color:var(--mint);}
-.dark .links a span{color:var(--sky-3);}
-.dark .links a:hover{color:var(--sky-1);}
-.dark .links a:hover span{color:var(--sky-2);}
+.dark .links a b{color:var(--mint);}
+.dark .links a span{color:var(--sky-2);}
+.dark .links a:hover{border-left-color:var(--sky-2);}
+.dark .links a:hover b{color:var(--sky-1);}
 
 /* ── section divider ────────────────────────────────────────────── */
 .section-no{
   font-family:'Inter Tight',sans-serif;font-size:var(--f9);font-weight:700;
-  letter-spacing:-.045em;line-height:1;color:var(--mint);
+  letter-spacing:-.045em;line-height:1;color:var(--teal);
   display:block;margin-bottom:var(--s2);
 }
 .divider h2{max-width:20ch;}
@@ -360,11 +381,11 @@ h3 i{font-size:1em;margin-right:var(--s1);}
 <div class="slides">
 
 <!-- ══════════ 1 · INTRODUCTION ══════════ -->
-<section data-transition="fade">
+<section class="dark" data-background-color="#1A312C" data-transition="fade">
   <div class="shape"></div>
   <div class="frame">
     <div class="fill">
-      <div class="hero">
+      <div>
         <div>
           <div class="kicker">Release Engineering</div>
           <h1>Flutter Release<br>Pipeline</h1>
@@ -375,14 +396,6 @@ h3 i{font-size:1em;margin-right:var(--s1);}
           </p>
         </div>
 
-        <div class="card">
-          <div class="card-hd"><i>🚀</i>The pipeline</div>
-          <div class="row"><span class="chip">01</span><span class="lbl">Clone the repository</span></div>
-          <div class="row"><span class="chip">02</span><span class="lbl">Bring the secret files</span></div>
-          <div class="row"><span class="chip">03</span><span class="lbl">Generate the code</span></div>
-          <div class="row"><span class="chip">04</span><span class="lbl">Build the release</span></div>
-          <div class="row"><span class="chip on">05</span><span class="lbl">Upload to the testers</span></div>
-        </div>
       </div>
 
       <div class="meta">
@@ -392,9 +405,9 @@ h3 i{font-size:1em;margin-right:var(--s1);}
       </div>
 
       <div class="links">
-        <a href="VARIABLES.md"><i>📄</i>VARIABLES.md<span>Every setting in pipeline.properties, explained</span></a>
-        <a href="DEVELOPER_HANDBOOK.md"><i>📘</i>DEVELOPER_HANDBOOK.md<span>Store accounts, keys and the handover</span></a>
-        <a href="README.md"><i>📗</i>README.md<span>What each pipeline stage does</span></a>
+        <a href="VARIABLES.md"><b>VARIABLES.md</b><span>Every setting in pipeline.properties, explained</span></a>
+        <a href="DEVELOPER_HANDBOOK.md"><b>DEVELOPER_HANDBOOK.md</b><span>Store accounts, keys and the handover</span></a>
+        <a href="README.md"><b>README.md</b><span>What each pipeline stage does</span></a>
       </div>
     </div>
 
@@ -930,9 +943,9 @@ h3 i{font-size:1em;margin-right:var(--s1);}
       </p>
 
       <div class="links">
-        <a href="VARIABLES.md"><i>📄</i>VARIABLES.md<span>Every setting in pipeline.properties, explained</span></a>
-        <a href="DEVELOPER_HANDBOOK.md"><i>📘</i>DEVELOPER_HANDBOOK.md<span>Store accounts, keys and the handover</span></a>
-        <a href="README.md"><i>📗</i>README.md<span>What each pipeline stage does</span></a>
+        <a href="VARIABLES.md"><b>VARIABLES.md</b><span>Every setting in pipeline.properties, explained</span></a>
+        <a href="DEVELOPER_HANDBOOK.md"><b>DEVELOPER_HANDBOOK.md</b><span>Store accounts, keys and the handover</span></a>
+        <a href="README.md"><b>README.md</b><span>What each pipeline stage does</span></a>
       </div>
     </div>
 
